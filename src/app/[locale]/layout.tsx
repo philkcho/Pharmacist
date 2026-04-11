@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Pharmacist — Expert OTC Medication Recommendations",
-    template: "%s | Pharmacist",
+    default: "Dr.pharmacist — Expert OTC Medication Recommendations",
+    template: "%s | Dr.pharmacist",
   },
   description:
     "Pharmacist-reviewed recommendations for over-the-counter medications. Trusted advice from licensed pharmacists.",

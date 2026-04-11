@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { defineConfig } from "drizzle-kit";
 
 export default defineConfig({
@@ -5,6 +6,11 @@ export default defineConfig({
   schema: "./src/lib/db/schema.ts",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL!,
+    host: "db.rlemyrdivdwibooxbugq.supabase.co",
+    port: 5432,
+    user: "postgres",
+    password: process.env.DB_PASSWORD!,
+    database: "postgres",
+    ssl: "require",
   },
 });

@@ -9,38 +9,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus } from "lucide-react";
+import { Plus, ExternalLink } from "lucide-react";
+import { getArticles } from "@/lib/actions/articles";
 
-// TODO: Replace with real data from Supabase
-const mockArticles = [
-  {
-    id: 1,
-    title: "Best Antihistamines for Seasonal Allergies",
-    slug: "best-antihistamines-seasonal-allergies",
-    status: "published" as const,
-    category: "Allergy",
-    publishedAt: "2026-04-01",
-    viewCount: 0,
-  },
-  {
-    id: 2,
-    title: "Ibuprofen vs Acetaminophen: A Pharmacist's Guide",
-    slug: "ibuprofen-vs-acetaminophen",
-    status: "draft" as const,
-    category: "Pain Relief",
-    publishedAt: null,
-    viewCount: 0,
-  },
-];
-
-const statusVariant: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+const statusVariant: Record<
+  string,
+  "default" | "secondary" | "outline" | "destructive"
+> = {
   published: "default",
   draft: "secondary",
   in_review: "outline",
   archived: "destructive",
 };
 
-export default function ArticlesPage() {
+export default async function ArticlesPage() {
+  const articles = await getArticles();
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -64,19 +48,30 @@ export default function ArticlesPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {mockArticles.map((article) => (
+            {articles.map((article) => (
               <TableRow key={article.id}>
-                <TableCell className="font-medium">{article.title}</TableCell>
-                <TableCell>{article.category}</TableCell>
+                <TableCell className="font-medium">
+                  <Link
+                    href={`/${article.slug}`}
+                    className="hover:underline"
+                    target="_blank"
+                  >
+                    {article.title}
+                    <ExternalLink className="ml-1 inline h-3 w-3 text-muted-foreground" />
+                  </Link>
+                </TableCell>
+                <TableCell>{article.category?.name ?? "—"}</TableCell>
                 <TableCell>
-                  <Badge variant={statusVariant[article.status]}>
+                  <Badge variant={statusVariant[article.status] ?? "secondary"}>
                     {article.status}
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {article.publishedAt ?? "—"}
+                  {article.published_at
+                    ? new Date(article.published_at).toLocaleDateString()
+                    : "—"}
                 </TableCell>
-                <TableCell>{article.viewCount}</TableCell>
+                <TableCell>{article.view_count}</TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
@@ -88,6 +83,16 @@ export default function ArticlesPage() {
                 </TableCell>
               </TableRow>
             ))}
+            {articles.length === 0 && (
+              <TableRow>
+                <TableCell
+                  colSpan={6}
+                  className="py-8 text-center text-muted-foreground"
+                >
+                  No articles yet. Create your first article.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>

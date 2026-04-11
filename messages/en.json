@@ -1,6 +1,6 @@
 {
   "site": {
-    "name": "Pharmacist",
+    "name": "Dr.pharmacist",
     "description": "Expert pharmacist recommendations for over-the-counter medications"
   },
   "nav": {
@@ -11,7 +11,7 @@
   },
   "footer": {
     "disclaimer": "The information on this website is for educational purposes only and is not a substitute for professional medical advice. Always consult your healthcare provider or pharmacist before starting any new medication. If you are experiencing a medical emergency, call 911 immediately.",
-    "copyright": "© {year} Pharmacist. All rights reserved."
+    "copyright": "© {year} Dr.pharmacist. All rights reserved."
   },
   "articles": {
     "readMore": "Read More",

@@ -23,12 +23,6 @@ export function Header() {
             {t("nav.home")}
           </Link>
           <Link
-            href="/categories"
-            className="text-muted-foreground transition-colors hover:text-foreground"
-          >
-            {t("nav.categories")}
-          </Link>
-          <Link
             href="/about"
             className="text-muted-foreground transition-colors hover:text-foreground"
           >

@@ -1,4 +1,4 @@
-# Pharmacist
+# Dr.pharmacist
 
 약사가 OTC(일반의약품)를 분야별로 분석하여 추천 기사를 게시하는 영어 웹사이트.
 

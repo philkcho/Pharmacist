@@ -1,7 +1,41 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, FolderOpen, Pill, Eye } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 
-export default function DashboardPage() {
+async function getDashboardStats() {
+  const supabase = await createClient();
+
+  const [articles, published, categories, medications, views] =
+    await Promise.all([
+      supabase.from("articles").select("id", { count: "exact", head: true }),
+      supabase
+        .from("articles")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "published"),
+      supabase
+        .from("categories")
+        .select("id", { count: "exact", head: true }),
+      supabase
+        .from("medications")
+        .select("id", { count: "exact", head: true }),
+      supabase.from("articles").select("view_count"),
+    ]);
+
+  const totalViews =
+    views.data?.reduce((sum, a) => sum + (a.view_count ?? 0), 0) ?? 0;
+
+  return {
+    totalArticles: articles.count ?? 0,
+    publishedArticles: published.count ?? 0,
+    totalCategories: categories.count ?? 0,
+    totalMedications: medications.count ?? 0,
+    totalViews,
+  };
+}
+
+export default async function DashboardPage() {
+  const stats = await getDashboardStats();
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Dashboard</h1>
@@ -15,8 +49,10 @@ export default function DashboardPage() {
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
-            <p className="text-xs text-muted-foreground">0 published</p>
+            <div className="text-2xl font-bold">{stats.totalArticles}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.publishedArticles} published
+            </p>
           </CardContent>
         </Card>
 
@@ -26,7 +62,7 @@ export default function DashboardPage() {
             <FolderOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.totalCategories}</div>
           </CardContent>
         </Card>
 
@@ -36,7 +72,7 @@ export default function DashboardPage() {
             <Pill className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.totalMedications}</div>
           </CardContent>
         </Card>
 
@@ -46,7 +82,7 @@ export default function DashboardPage() {
             <Eye className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">0</div>
+            <div className="text-2xl font-bold">{stats.totalViews}</div>
           </CardContent>
         </Card>
       </div>

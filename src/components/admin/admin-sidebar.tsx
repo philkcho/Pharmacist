@@ -20,6 +20,7 @@ import {
   FolderOpen,
   Pill,
   ExternalLink,
+  Sparkles,
 } from "lucide-react";
 
 const menuItems = [
@@ -27,6 +28,11 @@ const menuItems = [
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Generate Article",
+    href: "/articles/generate",
+    icon: Sparkles,
   },
   {
     title: "Articles",
@@ -53,7 +59,7 @@ export function AdminSidebar() {
       <SidebarHeader className="border-b px-6 py-4">
         <Link href="/dashboard" className="flex items-center gap-2">
           <Pill className="h-5 w-5 text-primary" />
-          <span className="text-lg font-bold">Pharmacist</span>
+          <span className="text-lg font-bold">Dr.pharmacist</span>
           <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
             Admin
           </span>
