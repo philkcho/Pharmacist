@@ -250,6 +250,124 @@ export async function deleteMedication(id: number) {
 }
 
 // ============================================================
+// Approval queue
+// ============================================================
+
+export type ApprovalStatus = "draft" | "pending_review" | "approved" | "rejected";
+
+export interface ApprovalQueueRow {
+  id: number;
+  name: string;
+  slug: string;
+  genericName: string | null;
+  brandNames: string[] | null;
+  description: string | null;
+  imageUrl: string | null;
+  productType: string;
+  approvalStatus: string;
+  source: string;
+  categoryName: string | null;
+  inciList: string | null;
+  externalSource: string | null;
+  createdAt: string;
+}
+
+export async function getApprovalQueue(
+  status: ApprovalStatus = "draft",
+  limit = 50
+): Promise<ApprovalQueueRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("medications")
+    .select("*, category:categories(name)")
+    .eq("approval_status", status)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[medications] approval queue failed:", error);
+    return [];
+  }
+
+  return (data ?? []).map((r: Record<string, unknown>) => ({
+    id: r.id as number,
+    name: r.name as string,
+    slug: r.slug as string,
+    genericName: (r.generic_name as string) ?? null,
+    brandNames: (r.brand_names as string[]) ?? null,
+    description: (r.description as string) ?? null,
+    imageUrl: (r.image_url as string) ?? null,
+    productType: (r.product_type as string) ?? "otc_drug",
+    approvalStatus: (r.approval_status as string) ?? "draft",
+    source: (r.source as string) ?? "manual",
+    categoryName: (r.category as { name: string } | null)?.name ?? null,
+    inciList: (r.inci_list as string) ?? null,
+    externalSource: (r.external_source as string) ?? null,
+    createdAt: r.created_at as string,
+  }));
+}
+
+export async function approveProduct(
+  id: number
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { ok: false, error: "Unauthorized" };
+
+  const { error } = await supabase
+    .from("medications")
+    .update({
+      approval_status: "approved",
+      approved_at: new Date().toISOString(),
+      approved_by: user.id,
+    })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/approval-queue");
+  revalidatePath("/medications");
+  return { ok: true };
+}
+
+export async function rejectProduct(
+  id: number
+): Promise<{ ok: boolean; error?: string }> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("medications")
+    .update({ approval_status: "rejected" })
+    .eq("id", id);
+
+  if (error) return { ok: false, error: error.message };
+  revalidatePath("/approval-queue");
+  return { ok: true };
+}
+
+export async function getApprovalCounts(): Promise<
+  Record<ApprovalStatus, number>
+> {
+  const supabase = await createClient();
+  const counts: Record<ApprovalStatus, number> = {
+    draft: 0,
+    pending_review: 0,
+    approved: 0,
+    rejected: 0,
+  };
+
+  for (const status of Object.keys(counts) as ApprovalStatus[]) {
+    const { count } = await supabase
+      .from("medications")
+      .select("id", { count: "exact", head: true })
+      .eq("approval_status", status);
+    counts[status] = count ?? 0;
+  }
+
+  return counts;
+}
+
+// ============================================================
 // Public compare page queries
 // ============================================================
 
