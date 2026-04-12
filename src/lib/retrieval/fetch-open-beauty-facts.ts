@@ -283,31 +283,34 @@ export async function persistBeautyProducts(
       .replace(/\s+/g, "-")
       .slice(0, 60);
 
-    const { error } = await admin.from("medications").insert({
-      name: p.name,
-      slug: `${slug}-obf-${p.barcode.slice(-6)}`,
-      brand_names: p.brand ? [p.brand] : [],
-      description: p.categories
-        ? `${p.name} — ${p.categories.split(",").slice(0, 3).join(", ")}`
-        : p.name,
-      image_url: p.imageUrl,
-      images: p.imageUrl
-        ? [{ url: p.imageUrl, alt: p.name, isPrimary: true, sortOrder: 0 }]
-        : [],
-      inci_list: p.inci,
-      is_otc: false,
-      source: "manual",
-      product_type: "cosmetic",
-      approval_status: "draft",
-      obf_barcode: p.barcode,
-      external_source: "obf",
-      external_id: p.barcode,
-      last_external_sync: new Date().toISOString(),
-      country_of_origin: "KR", // Default assumption for beauty trend queries
-    });
+    const { data: insertedRow, error } = await admin
+      .from("medications")
+      .insert({
+        name: p.name,
+        slug: `${slug}-obf-${p.barcode.slice(-6)}`,
+        brand_names: p.brand ? [p.brand] : [],
+        description: p.categories
+          ? `${p.name} — ${p.categories.split(",").slice(0, 3).join(", ")}`
+          : p.name,
+        image_url: p.imageUrl,
+        images: p.imageUrl
+          ? [{ url: p.imageUrl, alt: p.name, isPrimary: true, sortOrder: 0 }]
+          : [],
+        inci_list: p.inci,
+        is_otc: false,
+        source: "manual",
+        product_type: "cosmetic",
+        approval_status: "draft",
+        obf_barcode: p.barcode,
+        external_source: "obf",
+        external_id: p.barcode,
+        last_external_sync: new Date().toISOString(),
+        country_of_origin: "KR",
+      })
+      .select("id")
+      .single();
 
     if (error) {
-      // 23505 = unique violation (slug or barcode collision), skip silently
       if (error.code !== "23505") {
         console.warn(
           `[obf] persist failed for "${p.name}":`,
@@ -316,6 +319,22 @@ export async function persistBeautyProducts(
       }
     } else {
       inserted++;
+      // Auto-generate purchase links (search URLs) for this product
+      if (insertedRow?.id) {
+        const { autoGeneratePurchaseLinks } = await import(
+          "@/lib/actions/purchase-links"
+        );
+        autoGeneratePurchaseLinks(
+          insertedRow.id as number,
+          p.name,
+          "cosmetic"
+        ).catch((err) =>
+          console.warn(
+            `[obf] auto-link failed for "${p.name}":`,
+            err instanceof Error ? err.message : err
+          )
+        );
+      }
     }
   }
 

@@ -11,6 +11,7 @@ import {
   Check,
   X,
   FlaskConical,
+  ShoppingCart,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -67,7 +68,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
   const data = await getTrendBySlug(slug);
   if (!data) notFound();
 
-  const { topic, analysis, matchedMedications } = data;
+  const { topic, analysis, matchedMedications, purchaseLinks } = data;
   const synthesis: Analysis | null =
     analysis.synthesisJsonb != null &&
     typeof analysis.synthesisJsonb === "object" &&
@@ -210,6 +211,38 @@ export default async function TrendPage({ params }: TrendPageProps) {
             These products are for informational purposes only. Always consult
             your pharmacist or healthcare provider before use.
           </p>
+
+          {/* Where to Buy links */}
+          {purchaseLinks.length > 0 && (
+            <div className="mt-4">
+              <h3 className="text-sm font-medium">Where to Buy</h3>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {purchaseLinks.map((link) => (
+                  <a
+                    key={link.linkId}
+                    href={`/api/click/${link.linkId}?ref=trend_article&rid=${topic.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+                  >
+                    <ShoppingCart className="h-3 w-3" />
+                    {link.retailerName}
+                    {link.price && (
+                      <span className="text-xs text-muted-foreground">
+                        {link.priceCurrency === "USD" ? "$" : link.priceCurrency}
+                        {link.price}
+                      </span>
+                    )}
+                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                  </a>
+                ))}
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Dr.pharmacist may earn a commission from purchases made through
+                these links.
+              </p>
+            </div>
+          )}
         </section>
       )}
 

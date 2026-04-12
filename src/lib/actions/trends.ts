@@ -701,6 +701,17 @@ export interface TrendPageData {
     reviewedAt: string | null;
     comparisonScore: number | null;
   }>;
+  /** Purchase links for matched medications (retailer search URLs). */
+  purchaseLinks: Array<{
+    medicationId: number;
+    retailerName: string;
+    retailerSlug: string;
+    url: string;
+    affiliateUrl: string | null;
+    price: string | null;
+    priceCurrency: string;
+    linkId: number;
+  }>;
 }
 
 interface TrendAnalysisDbRow {
@@ -824,7 +835,46 @@ export async function getTrendBySlug(
     }
   }
 
-  return { topic, analysis, matchedMedications };
+  // 4. Fetch purchase links for matched medications
+  let purchaseLinks: Array<{
+    medicationId: number;
+    retailerName: string;
+    retailerSlug: string;
+    url: string;
+    affiliateUrl: string | null;
+    price: string | null;
+    priceCurrency: string;
+    linkId: number;
+  }> = [];
+
+  if (medIds.length > 0) {
+    const { data: linkData } = await supabase
+      .from("product_purchase_links")
+      .select("*, retailers(name, slug)")
+      .in("medication_id", medIds)
+      .eq("is_active", true)
+      .order("sort_order");
+
+    if (linkData) {
+      purchaseLinks = linkData.map(
+        (r: Record<string, unknown>) => {
+          const retailer = r.retailers as { name: string; slug: string } | null;
+          return {
+            medicationId: r.medication_id as number,
+            retailerName: retailer?.name ?? "Unknown",
+            retailerSlug: retailer?.slug ?? "",
+            url: r.url as string,
+            affiliateUrl: (r.affiliate_url as string) ?? null,
+            price: r.price != null ? String(r.price) : null,
+            priceCurrency: (r.price_currency as string) ?? "USD",
+            linkId: r.id as number,
+          };
+        }
+      );
+    }
+  }
+
+  return { topic, analysis, matchedMedications, purchaseLinks };
 }
 
 /**

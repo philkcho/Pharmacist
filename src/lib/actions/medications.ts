@@ -114,6 +114,25 @@ export async function getOrFetchMedication(
       description: row.description ?? null,
     } as unknown as CachedMedication;
   }
+
+  // Auto-generate purchase links for newly cached FDA products
+  if (upserted && (!existing || existing.id !== upserted.id)) {
+    import("@/lib/actions/purchase-links")
+      .then(({ autoGeneratePurchaseLinks }) =>
+        autoGeneratePurchaseLinks(
+          upserted.id,
+          upserted.name,
+          "otc_drug"
+        )
+      )
+      .catch((err) =>
+        console.warn(
+          "[medications] auto-link failed:",
+          err instanceof Error ? err.message : err
+        )
+      );
+  }
+
   return upserted;
 }
 
