@@ -9,7 +9,6 @@ import {
   ArrowRight,
   Search,
   Store,
-  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
 import {
@@ -54,38 +53,25 @@ export default async function TopicPage({ params }: TopicPageProps) {
           Top products by retailer — compare, analyze, and buy.
         </p>
 
-        {/* Analysis action bar */}
-        <div className="mt-4 flex flex-wrap items-center gap-3">
-          <Button
-            render={
-              <Link
-                href={`/compare/${keyword}`}
-              />
-            }
-          >
-            <BarChart3 className="mr-2 h-4 w-4" />
-            Analyze All Products
-          </Button>
-
-          {data.products.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">
-                or select a product:
-              </span>
-              {data.products.slice(0, 5).map((p) => (
-                <Button
-                  key={p.id}
-                  variant="outline"
-                  size="sm"
-                  render={<Link href={`/compare/${p.slug}`} />}
-                >
-                  <FlaskConical className="mr-1 h-3 w-3" />
-                  {p.name.length > 20 ? p.name.slice(0, 20) + "…" : p.name}
-                </Button>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Select a product to analyze */}
+        {data.products.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              Select a product to analyze:
+            </span>
+            {data.products.slice(0, 5).map((p) => (
+              <Button
+                key={p.id}
+                variant="outline"
+                size="sm"
+                render={<Link href={`/compare/${p.slug}`} />}
+              >
+                <FlaskConical className="mr-1 h-3 w-3" />
+                {p.name.length > 25 ? p.name.slice(0, 25) + "…" : p.name}
+              </Button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Retailer Product Listings — horizontal scroll per retailer */}
