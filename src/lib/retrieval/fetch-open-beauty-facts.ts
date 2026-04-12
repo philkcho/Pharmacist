@@ -219,6 +219,87 @@ export const fetchOpenBeautyFacts: SourceFetcher = async (
  * SourceFragment conversion. Not a SourceFetcher — called directly
  * from match-products.ts.
  */
+/**
+ * Persist OBF search results as `draft` cosmetic products in the
+ * medications table. Dedupes by `obf_barcode` — if a product with
+ * the same barcode already exists, it's skipped (no upsert to
+ * avoid overwriting pharmacist edits).
+ *
+ * Called from `analyzeTrend()` when category='beauty_fitness' so
+ * beauty trend products accumulate in the DB for pharmacist review.
+ *
+ * Returns the count of newly inserted rows.
+ */
+export async function persistBeautyProducts(
+  query: string,
+  limit = 5
+): Promise<number> {
+  // Dynamic import to avoid circular dependency
+  const { createAdminClient } = await import("@/lib/supabase/admin");
+  const admin = createAdminClient();
+
+  const products = await searchBeautyProducts(query, limit);
+  if (products.length === 0) return 0;
+
+  let inserted = 0;
+  for (const p of products) {
+    if (!p.barcode || !p.name) continue;
+
+    // Check for existing product with same barcode
+    const { data: existing } = await admin
+      .from("medications")
+      .select("id")
+      .eq("obf_barcode", p.barcode)
+      .maybeSingle();
+
+    if (existing) continue;
+
+    const slug = p.name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, "")
+      .trim()
+      .replace(/\s+/g, "-")
+      .slice(0, 60);
+
+    const { error } = await admin.from("medications").insert({
+      name: p.name,
+      slug: `${slug}-obf-${p.barcode.slice(-6)}`,
+      brand_names: p.brand ? [p.brand] : [],
+      description: p.categories
+        ? `${p.name} — ${p.categories.split(",").slice(0, 3).join(", ")}`
+        : p.name,
+      image_url: p.imageUrl,
+      images: p.imageUrl
+        ? [{ url: p.imageUrl, alt: p.name, isPrimary: true, sortOrder: 0 }]
+        : [],
+      inci_list: p.inci,
+      is_otc: false,
+      source: "manual",
+      product_type: "cosmetic",
+      approval_status: "draft",
+      obf_barcode: p.barcode,
+      external_source: "obf",
+      external_id: p.barcode,
+      last_external_sync: new Date().toISOString(),
+      country_of_origin: "KR", // Default assumption for beauty trend queries
+    });
+
+    if (error) {
+      // 23505 = unique violation (slug or barcode collision), skip silently
+      if (error.code !== "23505") {
+        console.warn(
+          `[obf] persist failed for "${p.name}":`,
+          error.message
+        );
+      }
+    } else {
+      inserted++;
+    }
+  }
+
+  return inserted;
+}
+
 export async function searchBeautyProducts(
   query: string,
   limit = 5

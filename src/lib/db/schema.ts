@@ -85,6 +85,21 @@ export const medicationSourceTypeEnum = pgEnum("medication_source_type", [
   "other_authoritative",
 ]);
 
+// Product classification + approval (matches migration 006).
+export const productTypeEnum = pgEnum("product_type", [
+  "otc_drug",
+  "supplement",
+  "cosmetic",
+  "quasi_drug",
+]);
+
+export const approvalStatusEnum = pgEnum("approval_status", [
+  "draft",
+  "pending_review",
+  "approved",
+  "rejected",
+]);
+
 // Trend pipeline enums (matches migration 005).
 export const trendSourceEnum = pgEnum("trend_source", ["google_trends"]);
 
@@ -205,6 +220,38 @@ export const medications = pgTable(
     }),
     viewCount: bigint("view_count", { mode: "number" }).notNull().default(0),
 
+    // Product classification + approval gate (migration 006)
+    productType: productTypeEnum("product_type").notNull().default("otc_drug"),
+    approvalStatus: approvalStatusEnum("approval_status")
+      .notNull()
+      .default("draft"),
+    approvedAt: timestamp("approved_at", { withTimezone: true }),
+    approvedBy: uuid("approved_by").references(() => pharmacistProfiles.id, {
+      onDelete: "set null",
+    }),
+
+    // E-commerce identifiers
+    barcode: text(),
+    sku: text(),
+    countryOfOrigin: text("country_of_origin"),
+
+    // K-beauty / cosmetic specific
+    inciList: text("inci_list"),
+    skinTypes: text("skin_types").array(),
+    skinConcerns: text("skin_concerns").array(),
+    texture: text(),
+    volumeWeight: text("volume_weight"),
+    kBeautyBrand: text("k_beauty_brand"),
+
+    // Multi-image support
+    images: jsonb().default([]),
+
+    // External source tracking
+    obfBarcode: text("obf_barcode"),
+    externalSource: text("external_source"),
+    externalId: text("external_id"),
+    lastExternalSync: timestamp("last_external_sync", { withTimezone: true }),
+
     createdAt: timestamp("created_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
@@ -220,6 +267,8 @@ export const medications = pgTable(
       table.isFeatured,
       table.comparisonScore
     ),
+    index("idx_medications_product_type").on(table.productType),
+    index("idx_medications_approval").on(table.approvalStatus),
     check(
       "medications_comparison_score_range",
       sql`${table.comparisonScore} is null or (${table.comparisonScore} >= 0 and ${table.comparisonScore} <= 100)`
@@ -511,6 +560,7 @@ export const medicationsRelations = relations(medications, ({ one, many }) => ({
   }),
   articleMedications: many(articleMedications),
   references: many(medicationReferences),
+  purchaseLinks: many(productPurchaseLinks),
   reviewedBy: one(pharmacistProfiles, {
     fields: [medications.reviewedBy],
     references: [pharmacistProfiles.id],
@@ -598,6 +648,104 @@ export const trendAnalysesRelations = relations(
     topic: one(trendTopics, {
       fields: [trendAnalyses.trendTopicId],
       references: [trendTopics.id],
+    }),
+  })
+);
+
+// ============================================================
+// Retailers + Purchase Links + Click Tracking (migration 006)
+// ============================================================
+
+export const retailers = pgTable("retailers", {
+  id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  name: text().notNull(),
+  slug: text().notNull().unique(),
+  websiteUrl: text("website_url").notNull(),
+  logoUrl: text("logo_url"),
+  country: text().notNull().default("US"),
+  isActive: boolean("is_active").notNull().default(true),
+  affiliateNetwork: text("affiliate_network"),
+  affiliateBaseUrl: text("affiliate_base_url"),
+  commissionRate: numeric("commission_rate", { precision: 5, scale: 2 }),
+  cookieDays: integer("cookie_days"),
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+export const productPurchaseLinks = pgTable(
+  "product_purchase_links",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    medicationId: bigint("medication_id", { mode: "number" })
+      .notNull()
+      .references(() => medications.id, { onDelete: "cascade" }),
+    retailerId: bigint("retailer_id", { mode: "number" })
+      .notNull()
+      .references(() => retailers.id, { onDelete: "cascade" }),
+    url: text().notNull(),
+    affiliateUrl: text("affiliate_url"),
+    price: numeric({ precision: 10, scale: 2 }),
+    priceCurrency: text("price_currency").default("USD"),
+    isActive: boolean("is_active").notNull().default(true),
+    sortOrder: integer("sort_order").notNull().default(0),
+    lastPriceCheck: timestamp("last_price_check", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_product_purchase_links_med").on(table.medicationId),
+    uniqueIndex("product_purchase_links_unique").on(
+      table.medicationId,
+      table.retailerId
+    ),
+  ]
+);
+
+export const purchaseClickEvents = pgTable(
+  "purchase_click_events",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    linkId: bigint("link_id", { mode: "number" })
+      .notNull()
+      .references(() => productPurchaseLinks.id, { onDelete: "cascade" }),
+    medicationId: bigint("medication_id", { mode: "number" }).notNull(),
+    retailerId: bigint("retailer_id", { mode: "number" }).notNull(),
+    referrerType: text("referrer_type").notNull(),
+    referrerId: bigint("referrer_id", { mode: "number" }),
+    sessionId: text("session_id"),
+    clickedAt: timestamp("clicked_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_click_events_link").on(table.linkId, table.clickedAt),
+    index("idx_click_events_med").on(table.medicationId, table.clickedAt),
+  ]
+);
+
+// Relations for new tables
+export const retailersRelations = relations(retailers, ({ many }) => ({
+  purchaseLinks: many(productPurchaseLinks),
+}));
+
+export const productPurchaseLinksRelations = relations(
+  productPurchaseLinks,
+  ({ one }) => ({
+    medication: one(medications, {
+      fields: [productPurchaseLinks.medicationId],
+      references: [medications.id],
+    }),
+    retailer: one(retailers, {
+      fields: [productPurchaseLinks.retailerId],
+      references: [retailers.id],
     }),
   })
 );

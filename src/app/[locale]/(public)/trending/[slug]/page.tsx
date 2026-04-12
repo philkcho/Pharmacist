@@ -183,7 +183,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
       {/* ===== Section 4 — Representative Products (conditional) ===== */}
       {hasProducts && (
         <section className="mt-8">
-          <h2 className="text-lg font-semibold">Recommended Products</h2>
+          <h2 className="text-lg font-semibold">Related Products</h2>
           <div className="mt-4 space-y-4">
             {matchedMedications.slice(0, 3).map((med) => {
               const match = productMatches.find(
@@ -206,6 +206,10 @@ export default async function TrendPage({ params }: TrendPageProps) {
               options may be added after pharmacist review.
             </div>
           )}
+          <p className="mt-3 text-xs text-muted-foreground">
+            These products are for informational purposes only. Always consult
+            your pharmacist or healthcare provider before use.
+          </p>
         </section>
       )}
 

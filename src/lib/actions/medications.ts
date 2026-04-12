@@ -325,6 +325,7 @@ export async function getMedicationsByCategorySlug(
     .from("medications")
     .select("*")
     .eq("category_id", category.id)
+    .eq("approval_status", "approved")
     .order("is_featured", { ascending: false })
     .order("comparison_score", { ascending: false, nullsFirst: false })
     .order("name");
@@ -350,6 +351,7 @@ export async function getFeaturedMedications(
     .from("medications")
     .select("*")
     .eq("is_featured", true)
+    .eq("approval_status", "approved")
     .order("comparison_score", { ascending: false, nullsFirst: false })
     .order("name")
     .limit(limit);

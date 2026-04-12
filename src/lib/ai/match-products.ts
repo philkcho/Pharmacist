@@ -89,6 +89,7 @@ export async function matchProducts(
     const { data } = await admin
       .from("medications")
       .select(SELECT_COLS)
+      .eq("approval_status", "approved")
       .or(
         `name.ilike.%${trimmed}%,brand_names.cs.{"${trimmed}"}`
       )
@@ -114,6 +115,7 @@ export async function matchProducts(
     const { data } = await admin
       .from("medications")
       .select(SELECT_COLS)
+      .eq("approval_status", "approved")
       .ilike("generic_name", `%${trimmed}%`)
       .order("reviewed_at", { ascending: false, nullsFirst: false })
       .order("comparison_score", { ascending: false, nullsFirst: true })
@@ -147,6 +149,7 @@ export async function matchProducts(
       const { data } = await admin
         .from("medications")
         .select(SELECT_COLS)
+        .eq("approval_status", "approved")
         .in("category_id", categoryIds)
         .eq("is_featured", true)
         .order("comparison_score", { ascending: false, nullsFirst: true })

@@ -21,7 +21,10 @@ import {
   fetchRecentPubmedStudies,
 } from "@/lib/retrieval/search-pubmed-recent";
 import { fetchCuratedSources } from "@/lib/retrieval/curated-sources";
-import { fetchOpenBeautyFacts } from "@/lib/retrieval/fetch-open-beauty-facts";
+import {
+  fetchOpenBeautyFacts,
+  persistBeautyProducts,
+} from "@/lib/retrieval/fetch-open-beauty-facts";
 import { fetchFaersTopReactions } from "@/lib/fda/faers-client";
 import { fetchActiveRecalls } from "@/lib/fda/enforcement-client";
 import { matchProducts } from "@/lib/ai/match-products";
@@ -163,7 +166,10 @@ export async function ingestWeeklyTrends(): Promise<IngestionResult> {
     );
   }
 
-  const supabase = await createClient();
+  // Use admin client to bypass RLS — this function runs from the
+  // CRON_SECRET-guarded cron route (no user session) and from the
+  // pharmacist-authenticated admin trigger.
+  const supabase = createAdminClient();
 
   for (const bundle of bundles) {
     for (const trend of bundle.trends) {
@@ -391,6 +397,16 @@ export async function analyzeTrend(
     }
     if (trendRow.category === "beauty_fitness") {
       retrievers.push(fetchOpenBeautyFacts);
+
+      // Persist OBF search results as draft cosmetic products so
+      // they accumulate for pharmacist review. Fire-and-forget —
+      // failures don't block analysis.
+      persistBeautyProducts(trendRow.query_text, 3).catch((err) => {
+        console.warn(
+          `[trends] persistBeautyProducts failed for trend ${trendId}:`,
+          err instanceof Error ? err.message : err
+        );
+      });
     }
 
     const retrieval = await runRetrieval(retrievers, {
@@ -795,7 +811,9 @@ export async function getTrendBySlug(
  * Return all published trend slugs for `generateStaticParams`.
  */
 export async function getPublishedTrendSlugs(): Promise<string[]> {
-  const supabase = await createClient();
+  // Use admin client because generateStaticParams runs at build
+  // time without an HTTP request (no cookies available).
+  const supabase = createAdminClient();
   const { data } = await supabase
     .from("trend_topics")
     .select("slug")
