@@ -138,26 +138,48 @@ export const fetchOpenBeautyFacts: SourceFetcher = async (
     return result;
   }
 
-  const terms: string[] = [];
-  terms.push(...input.entities.drugs);
-  terms.push(...input.entities.genericIngredients);
-  if (terms.length === 0) {
+  // Build search terms from all entity types — beauty queries
+  // often have entities in symptoms ("dry skin"), conditions
+  // ("acne"), or drugs ("retinoid") rather than just
+  // genericIngredients. Search each term individually to maximize
+  // coverage (OBF search works better with single keywords than
+  // long compound queries).
+  const terms = new Set<string>();
+  for (const t of input.entities.drugs) terms.add(t.trim());
+  for (const t of input.entities.genericIngredients) terms.add(t.trim());
+  for (const t of input.entities.symptoms) terms.add(t.trim());
+  for (const t of input.entities.conditions) terms.add(t.trim());
+  if (terms.size === 0) {
     // Fall back to raw query
-    terms.push(input.query);
+    terms.add(input.query);
   }
+  // Remove empties
+  terms.delete("");
 
-  const queryTerm = terms.join(" ").trim();
-  if (!queryTerm) return result;
+  if (terms.size === 0) return result;
 
-  let products: OBFProduct[];
-  try {
-    products = await searchOBF(queryTerm, 5);
-  } catch (err) {
-    result.errors.push(
-      `OBF search for "${queryTerm}" failed: ${err instanceof Error ? err.message : String(err)}`
-    );
-    return result;
+  // Search OBF for each term individually, collect unique products
+  const seenCodes = new Set<string>();
+  let products: OBFProduct[] = [];
+
+  for (const term of terms) {
+    try {
+      const hits = await searchOBF(term, 3);
+      for (const h of hits) {
+        const code = h.code ?? h.product_name;
+        if (code && !seenCodes.has(code)) {
+          seenCodes.add(code);
+          products.push(h);
+        }
+      }
+    } catch (err) {
+      result.errors.push(
+        `OBF search for "${term}" failed: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+    if (products.length >= 5) break;
   }
+  products = products.slice(0, 5);
 
   if (products.length === 0) return result;
 

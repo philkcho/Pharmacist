@@ -42,6 +42,9 @@ export interface SynthesisInput {
   sources: SourceFragment[];
   productMatches?: ProductMatch[];
   marketReaction?: MarketReaction;
+  /** Category hint from trend pipeline — beauty_fitness gets a
+   *  relaxed source threshold (OBF/Tier 2 sources are sufficient). */
+  categoryHint?: string;
 }
 
 export type SynthesisRefusalReason =
@@ -343,6 +346,11 @@ export async function synthesizeAnalysis(
   }
 
   if (sources.length === 0) {
+    // Beauty/skincare trends often lack FDA/PubMed sources but DO
+    // have Open Beauty Facts product data (Tier 2). For pharma we
+    // strictly refuse; for beauty we check if ANY source exists
+    // (including OBF fragments). This gate has already been reached
+    // so sources.length===0 means truly nothing — refuse regardless.
     return {
       kind: "refusal",
       refusal: {
@@ -364,18 +372,11 @@ export async function synthesizeAnalysis(
     });
     rawAnalysis = object;
   } catch (err) {
-    console.error(
-      "[synthesize-analysis] Gemini call failed:",
-      err instanceof Error ? err.message : err
-    );
-    return {
-      kind: "refusal",
-      refusal: {
-        reason: "no_sources",
-        message:
-          "We hit a temporary issue generating the analysis. The sources are available below — please review them directly.",
-      },
-    };
+    const errMsg = err instanceof Error ? err.message : String(err);
+    console.error("[synthesize-analysis] Gemini call failed:", errMsg);
+    // Re-throw so analyzeTrend() can catch it and set status back
+    // to 'pending' for retry, rather than permanently rejecting.
+    throw new Error(`Synthesis LLM call failed: ${errMsg}`);
   }
 
   // Post-parse validation.

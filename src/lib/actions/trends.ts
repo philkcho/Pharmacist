@@ -399,14 +399,24 @@ export async function analyzeTrend(
       retrievers.push(fetchOpenBeautyFacts);
 
       // Persist OBF search results as draft cosmetic products so
-      // they accumulate for pharmacist review. Fire-and-forget —
-      // failures don't block analysis.
-      persistBeautyProducts(trendRow.query_text, 3).catch((err) => {
-        console.warn(
-          `[trends] persistBeautyProducts failed for trend ${trendId}:`,
-          err instanceof Error ? err.message : err
-        );
-      });
+      // they accumulate for pharmacist review. Search by each
+      // entity keyword (ingredients, drugs, symptoms) — not just
+      // the raw query — so "best skincare routine" also finds
+      // "moisturizer", "sunscreen", "retinoid" products.
+      const beautySearchTerms = new Set<string>();
+      beautySearchTerms.add(trendRow.query_text);
+      for (const t of understanding.entities.genericIngredients) beautySearchTerms.add(t);
+      for (const t of understanding.entities.drugs) beautySearchTerms.add(t);
+      for (const t of understanding.entities.symptoms) beautySearchTerms.add(t);
+
+      for (const term of beautySearchTerms) {
+        persistBeautyProducts(term, 3).catch((err) => {
+          console.warn(
+            `[trends] persistBeautyProducts("${term}") failed for trend ${trendId}:`,
+            err instanceof Error ? err.message : err
+          );
+        });
+      }
     }
 
     const retrieval = await runRetrieval(retrievers, {
@@ -419,15 +429,24 @@ export async function analyzeTrend(
     // recalls, recent PubMed). All calls degrade to empty silently
     // so a single API failure doesn't block publishing.
     //
-    // Product matching — only for recommendation-intent topic types.
-    const PRODUCT_TYPES = new Set([
+    // Product matching:
+    // - Pharma (health): only for recommendation-intent topic types
+    //   (product_info, comparison, symptom_relief) to avoid
+    //   inappropriate drug suggestions for dosage/safety queries.
+    // - Beauty (beauty_fitness): ALWAYS attempt matching regardless
+    //   of topicType, because even "general_education" beauty
+    //   articles mention specific product categories (moisturizer,
+    //   sunscreen, retinoid) that users want to explore.
+    const PHARMA_PRODUCT_TYPES = new Set([
       "product_info",
       "comparison",
       "symptom_relief",
     ]);
-    const productMatches: ProductMatch[] = PRODUCT_TYPES.has(
-      understanding.topicType
-    )
+    const shouldMatchProducts =
+      trendRow.category === "beauty_fitness" ||
+      PHARMA_PRODUCT_TYPES.has(understanding.topicType);
+
+    const productMatches: ProductMatch[] = shouldMatchProducts
       ? await matchProducts(
           understanding,
           trendRow.category as TrendCategory,
@@ -472,6 +491,7 @@ export async function analyzeTrend(
       sources: retrieval.fragments,
       productMatches,
       marketReaction,
+      categoryHint: trendRow.category,
     });
 
     // 5. Build AnalysisResult — the canonical shape we persist.
