@@ -190,42 +190,66 @@ function RetailerRow({ section }: { section: RetailerSection }) {
 }
 
 function RetailerProductCard({ product }: { product: RetailerProduct }) {
+  const analysisSlug = product.name
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .slice(0, 60);
+
   return (
-    <a
-      href={product.url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="group flex w-40 shrink-0 flex-col overflow-hidden rounded-lg border transition-all hover:border-primary/30 hover:shadow-md"
-    >
-      {/* Image — square, white bg */}
-      <div className="flex h-36 items-center justify-center bg-white p-2">
+    <div className="flex w-44 shrink-0 flex-col overflow-hidden rounded-lg border transition-all hover:border-primary/30 hover:shadow-md">
+      {/* Image — clickable to buy */}
+      <a
+        href={product.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group flex h-36 items-center justify-center bg-white p-2"
+      >
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
             alt={product.name}
-            className="max-h-full max-w-full object-contain"
+            className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
           />
         ) : (
           <Pill className="h-10 w-10 text-muted-foreground/20" />
         )}
-      </div>
+      </a>
 
       {/* Info */}
       <div className="flex flex-1 flex-col p-2">
-        <h3 className="line-clamp-2 text-xs font-medium leading-snug group-hover:text-primary">
+        <h3 className="line-clamp-2 text-xs font-medium leading-snug">
           {product.name}
         </h3>
         <p className="mt-1 line-clamp-1 text-[10px] text-muted-foreground">
           {product.description}
         </p>
-        <div className="mt-auto flex items-center justify-between pt-1.5">
-          <span className="text-sm font-bold text-primary">
-            {product.price}
-          </span>
-          <ExternalLink className="h-3 w-3 text-muted-foreground group-hover:text-primary" />
+        <span className="mt-1 text-sm font-bold text-primary">
+          {product.price}
+        </span>
+
+        {/* Two buttons: Analyze + Buy */}
+        <div className="mt-2 flex gap-1">
+          <Link
+            href={`/topics/${encodeURIComponent(analysisSlug)}`}
+            className="flex flex-1 items-center justify-center gap-1 rounded border px-1 py-1 text-[10px] font-medium transition-colors hover:bg-primary hover:text-primary-foreground"
+          >
+            <FlaskConical className="h-3 w-3" />
+            Analyze
+          </Link>
+          <a
+            href={product.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex flex-1 items-center justify-center gap-1 rounded bg-primary px-1 py-1 text-[10px] font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            <ShoppingCart className="h-3 w-3" />
+            Buy
+          </a>
         </div>
       </div>
-    </a>
+    </div>
   );
 }
 
