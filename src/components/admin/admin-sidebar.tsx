@@ -23,6 +23,7 @@ import {
   Sparkles,
   Inbox,
   TrendingUp,
+  Store,
 } from "lucide-react";
 
 const menuItems = [
@@ -55,6 +56,11 @@ const menuItems = [
     title: "Trends",
     href: "/trends",
     icon: TrendingUp,
+  },
+  {
+    title: "Retailers",
+    href: "/retailers",
+    icon: Store,
   },
   {
     title: "Review Requests",
