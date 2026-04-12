@@ -1,7 +1,6 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 
 export interface TopicProduct {
   id: number;
@@ -9,6 +8,7 @@ export interface TopicProduct {
   slug: string;
   genericName: string | null;
   brandNames: string[] | null;
+  description: string | null;
   imageUrl: string | null;
   priceRange: string | null;
   productType: string;
@@ -16,14 +16,23 @@ export interface TopicProduct {
   purchaseLinks: Array<{
     linkId: number;
     retailerName: string;
+    retailerSlug: string;
     url: string;
   }>;
+}
+
+export interface RetailerSearchLink {
+  name: string;
+  slug: string;
+  searchUrl: string;
 }
 
 export interface TopicPageData {
   keyword: string;
   displayKeyword: string;
   products: TopicProduct[];
+  /** Direct search links for each retailer (always available, even with 0 products) */
+  retailerSearchLinks: RetailerSearchLink[];
   relatedTrends: Array<{
     id: number;
     queryText: string;
@@ -32,13 +41,15 @@ export interface TopicPageData {
   }>;
 }
 
-/**
- * Load data for the /topics/[keyword] page.
- *
- * 1. Search medications by keyword (approved only)
- * 2. Search trend_topics that mention this keyword (published only)
- * 3. Load purchase links for matched products
- */
+const RETAILER_SEARCH_TEMPLATES: Record<string, (q: string) => string> = {
+  amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`,
+  iherb: (q) => `https://www.iherb.com/search?kw=${encodeURIComponent(q)}`,
+  stylekorean: (q) =>
+    `https://www.stylekorean.com/shop/search/result.php?search_str=${encodeURIComponent(q)}`,
+  yesstyle: (q) =>
+    `https://www.yesstyle.com/en/search?q=${encodeURIComponent(q)}`,
+};
+
 export async function getTopicByKeyword(
   keyword: string
 ): Promise<TopicPageData> {
@@ -51,21 +62,20 @@ export async function getTopicByKeyword(
   const { data: medData } = await supabase
     .from("medications")
     .select(
-      "id, name, slug, generic_name, brand_names, image_url, price_range, product_type, verdict, category_id"
+      "id, name, slug, generic_name, brand_names, description, image_url, price_range, product_type, verdict, category_id"
     )
-    .or(
-      `name.ilike.%${decoded}%,generic_name.ilike.%${decoded}%`
-    )
+    .or(`name.ilike.%${decoded}%,generic_name.ilike.%${decoded}%`)
     .order("comparison_score", { ascending: false, nullsFirst: true })
     .limit(5);
 
-  // 2. If not enough products, try searching by brand_names
   let products = (medData ?? []) as Array<Record<string, unknown>>;
+
+  // 2. If not enough, search by brand_names
   if (products.length < 5) {
     const { data: brandData } = await supabase
       .from("medications")
       .select(
-        "id, name, slug, generic_name, brand_names, image_url, price_range, product_type, verdict, category_id"
+        "id, name, slug, generic_name, brand_names, description, image_url, price_range, product_type, verdict, category_id"
       )
       .contains("brand_names", [decoded])
       .limit(5 - products.length);
@@ -73,19 +83,20 @@ export async function getTopicByKeyword(
     if (brandData) {
       const existingIds = new Set(products.map((p) => p.id));
       for (const row of brandData) {
-        if (!existingIds.has(row.id)) products.push(row as Record<string, unknown>);
+        if (!existingIds.has(row.id))
+          products.push(row as Record<string, unknown>);
       }
     }
   }
 
   // 3. Load purchase links for each product
   const productIds = products.map((p) => p.id as number);
-  let linksMap = new Map<number, TopicProduct["purchaseLinks"]>();
+  const linksMap = new Map<number, TopicProduct["purchaseLinks"]>();
 
   if (productIds.length > 0) {
     const { data: linkData } = await supabase
       .from("product_purchase_links")
-      .select("id, medication_id, url, retailers(name)")
+      .select("id, medication_id, url, retailers(name, slug)")
       .in("medication_id", productIds)
       .eq("is_active", true)
       .order("sort_order");
@@ -95,10 +106,13 @@ export async function getTopicByKeyword(
         const medId = link.medication_id as number;
         if (!linksMap.has(medId)) linksMap.set(medId, []);
         const retailers = link.retailers as unknown;
-        const retailer = Array.isArray(retailers) ? retailers[0] as { name: string } | undefined : retailers as { name: string } | null;
+        const retailer = Array.isArray(retailers)
+          ? (retailers[0] as { name: string; slug: string } | undefined)
+          : (retailers as { name: string; slug: string } | null);
         linksMap.get(medId)!.push({
           linkId: link.id as number,
           retailerName: retailer?.name ?? "Buy",
+          retailerSlug: retailer?.slug ?? "",
           url: link.url as string,
         });
       }
@@ -111,6 +125,7 @@ export async function getTopicByKeyword(
     slug: p.slug as string,
     genericName: (p.generic_name as string) ?? null,
     brandNames: (p.brand_names as string[]) ?? null,
+    description: (p.description as string) ?? null,
     imageUrl: (p.image_url as string) ?? null,
     priceRange: (p.price_range as string) ?? null,
     productType: (p.product_type as string) ?? "otc_drug",
@@ -118,7 +133,22 @@ export async function getTopicByKeyword(
     purchaseLinks: linksMap.get(p.id as number) ?? [],
   }));
 
-  // 4. Related trends (published, matching keyword)
+  // 4. Build retailer search links (always available)
+  const { data: retailers } = await supabase
+    .from("retailers")
+    .select("name, slug")
+    .eq("is_active", true)
+    .order("name");
+
+  const retailerSearchLinks: RetailerSearchLink[] = (retailers ?? [])
+    .filter((r) => RETAILER_SEARCH_TEMPLATES[r.slug as string])
+    .map((r) => ({
+      name: r.name as string,
+      slug: r.slug as string,
+      searchUrl: RETAILER_SEARCH_TEMPLATES[r.slug as string](decoded),
+    }));
+
+  // 5. Related trends
   const { data: trendData } = await supabase
     .from("trend_topics")
     .select("id, query_text, slug, category")
@@ -138,6 +168,7 @@ export async function getTopicByKeyword(
     keyword,
     displayKeyword,
     products: topicProducts,
+    retailerSearchLinks,
     relatedTrends,
   };
 }
