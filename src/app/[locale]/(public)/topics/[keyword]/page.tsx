@@ -64,7 +64,7 @@ export default async function TopicPage({ params }: TopicPageProps) {
                 key={p.id}
                 variant="outline"
                 size="sm"
-                render={<Link href={`/compare/${p.slug}`} />}
+                render={<Link href={`/analysis/${p.slug}`} />}
               >
                 <FlaskConical className="mr-1 h-3 w-3" />
                 {p.name.length > 25 ? p.name.slice(0, 25) + "…" : p.name}
@@ -218,7 +218,7 @@ function RetailerProductCard({ product }: { product: RetailerProduct }) {
         {/* Two buttons: Analyze + Buy */}
         <div className="mt-2 flex gap-1">
           <Link
-            href={`/topics/${encodeURIComponent(analysisSlug)}`}
+            href={`/analysis/${encodeURIComponent(analysisSlug)}`}
             className="flex flex-1 items-center justify-center gap-1 rounded border px-1 py-1 text-[10px] font-medium transition-colors hover:bg-primary hover:text-primary-foreground"
           >
             <FlaskConical className="h-3 w-3" />
@@ -274,7 +274,7 @@ function PharmacistProductRow({ product }: { product: TopicProduct }) {
         <Button
           size="sm"
           variant="default"
-          render={<Link href={`/compare/${product.slug}`} />}
+          render={<Link href={`/analysis/${product.slug}`} />}
         >
           <FlaskConical className="mr-1 h-3.5 w-3.5" />
           Analysis
