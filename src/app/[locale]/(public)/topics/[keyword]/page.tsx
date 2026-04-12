@@ -16,6 +16,8 @@ import {
   getTopicByKeyword,
   type TopicProduct,
   type RetailerSearchLink,
+  type RetailerSection,
+  type RetailerProduct,
 } from "@/lib/actions/topics";
 import type { Metadata } from "next";
 
@@ -69,27 +71,17 @@ export default async function TopicPage({ params }: TopicPageProps) {
         </section>
       )}
 
-      {/* Retailer Search — "Shop by Retailer" */}
-      {data.retailerSearchLinks.length > 0 && (
-        <section className="mb-10">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <Store className="h-5 w-5 text-primary" />
-            Shop &ldquo;{data.displayKeyword}&rdquo; by Retailer
-          </h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Browse top products on each retailer — prices and availability may
-            vary.
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {data.retailerSearchLinks.map((r) => (
-              <RetailerCard key={r.slug} retailer={r} />
-            ))}
-          </div>
-          <p className="mt-3 text-xs text-muted-foreground">
+      {/* Retailer Product Listings */}
+      {data.retailerSections.length > 0 && (
+        <div className="mb-10 space-y-10">
+          {data.retailerSections.map((section) => (
+            <RetailerProductSection key={section.retailerSlug} section={section} />
+          ))}
+          <p className="text-xs text-muted-foreground">
             Dr.pharmacist may earn a commission from purchases made through
-            these links.
+            these links. Prices and availability are subject to change.
           </p>
-        </section>
+        </div>
       )}
 
       {/* No products at all */}
@@ -270,36 +262,75 @@ function ProductCard({ product }: { product: TopicProduct }) {
 }
 
 // ============================================================
-// Retailer Search Card — "Browse on Amazon", "Browse on iHerb"
+// Retailer Product Section — 5 products per retailer
 // ============================================================
 
-function RetailerCard({ retailer }: { retailer: RetailerSearchLink }) {
-  const retailerEmoji: Record<string, string> = {
-    amazon: "🛒",
-    iherb: "🌿",
-    stylekorean: "🇰🇷",
-    yesstyle: "✨",
-  };
+function RetailerProductSection({ section }: { section: RetailerSection }) {
+  return (
+    <section>
+      <div className="flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-xl font-semibold">
+          <span className="text-2xl">{section.emoji}</span>
+          {section.retailerName} Top Picks
+        </h2>
+        <a
+          href={section.searchUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-1 text-sm text-primary hover:underline"
+        >
+          See all on {section.retailerName}
+          <ExternalLink className="h-3 w-3" />
+        </a>
+      </div>
 
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {section.products.slice(0, 5).map((product, i) => (
+          <RetailerProductCard key={i} product={product} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RetailerProductCard({ product }: { product: RetailerProduct }) {
   return (
     <a
-      href={retailer.searchUrl}
+      href={product.url}
       target="_blank"
       rel="noopener noreferrer"
-      className="group flex items-center gap-4 rounded-lg border p-4 transition-all hover:border-primary/30 hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-lg border transition-all hover:border-primary/30 hover:shadow-md"
     >
-      <span className="text-3xl">
-        {retailerEmoji[retailer.slug] ?? "🏪"}
-      </span>
-      <div className="flex-1">
-        <h3 className="font-semibold group-hover:text-primary">
-          {retailer.name}
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          Browse top products on {retailer.name}
-        </p>
+      {/* Image */}
+      <div className="flex h-40 items-center justify-center bg-white p-3">
+        {product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="max-h-full max-w-full object-contain"
+          />
+        ) : (
+          <Pill className="h-12 w-12 text-muted-foreground/20" />
+        )}
       </div>
-      <ExternalLink className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+
+      {/* Info */}
+      <div className="flex flex-1 flex-col p-3">
+        <h3 className="line-clamp-2 text-sm font-medium leading-snug group-hover:text-primary">
+          {product.name}
+        </h3>
+        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+          {product.description}
+        </p>
+        <div className="mt-auto flex items-center justify-between pt-2">
+          <span className="text-sm font-semibold text-primary">
+            {product.price}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground group-hover:text-primary">
+            Buy <ExternalLink className="h-3 w-3" />
+          </span>
+        </div>
+      </div>
     </a>
   );
 }
