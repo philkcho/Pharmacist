@@ -93,20 +93,50 @@ export default async function TrendPage({ params }: TrendPageProps) {
 
   const leadText: string = synthesis?.leadExplanation ?? "";
 
-  // Extract entity keywords for auto-linking in article body
+  // Extract entity keywords for auto-linking in article body.
+  // Include both ingredient names AND product-category words so
+  // users can click "moisturizer", "sunscreen", "gel cream" etc.
+  // — not just "hyaluronic acid".
   const understanding = analysis.understandingJsonb as {
     entities?: {
       drugs?: string[];
       genericIngredients?: string[];
       symptoms?: string[];
       conditions?: string[];
+      categorySlugs?: string[];
     };
   } | null;
+
+  // Map category slugs to display names for linking
+  const categoryKeywords: string[] = (
+    understanding?.entities?.categorySlugs ?? []
+  ).flatMap((slug) => {
+    // Convert slug like "k-beauty-moisturizers" to "moisturizer"
+    const name = slug.replace(/^k-beauty-/, "").replace(/-/g, " ");
+    // Also add singular form
+    const singular = name.replace(/s$/, "");
+    return [name, singular].filter((n) => n.length >= 3);
+  });
+
+  // Add common product-type keywords that appear in beauty/health articles
+  const productTypeKeywords = [
+    "moisturizer", "sunscreen", "cleanser", "serum", "toner",
+    "essence", "cream", "lotion", "gel cream", "sleeping mask",
+    "sheet mask", "eye cream", "lip balm", "body lotion",
+    "supplement", "vitamin", "multivitamin", "probiotic",
+    "pain reliever", "antihistamine", "antacid",
+  ];
+
+  // Build combined keyword list: entities + categories + product types
+  // that actually appear in the lead text (avoid dead links)
+  const leadLower = leadText.toLowerCase();
   const entityKeywords: string[] = [
     ...(understanding?.entities?.drugs ?? []),
     ...(understanding?.entities?.genericIngredients ?? []),
     ...(understanding?.entities?.symptoms ?? []),
     ...(understanding?.entities?.conditions ?? []),
+    ...categoryKeywords,
+    ...productTypeKeywords.filter((k) => leadLower.includes(k.toLowerCase())),
   ].filter((k) => k.length >= 3);
 
   return (
