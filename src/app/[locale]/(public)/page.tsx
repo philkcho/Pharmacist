@@ -1,12 +1,18 @@
-import { Search, ShieldCheck, BookOpen, Calendar, Clock, ArrowRight } from "lucide-react";
+import {
+  Search,
+  TrendingUp,
+  AlertTriangle,
+  Clock,
+  ArrowRight,
+  Pill,
+  Sparkles,
+} from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { getPublishedArticles } from "@/lib/actions/articles";
+import { Badge } from "@/components/ui/badge";
+import { listTrendsByStatus, type TrendTopicRow } from "@/lib/actions/trends";
 import { getCategories } from "@/lib/actions/categories";
-import { ProductLookup } from "@/components/home/product-lookup";
-import { CompareSidebar } from "@/components/home/compare-sidebar";
-import { CompareChips } from "@/components/home/compare-chips";
+import { HomeSearchBar } from "@/components/home/home-search-bar";
 
 const categoryEmojis: Record<string, string> = {
   "pain-relief": "💊",
@@ -18,188 +24,146 @@ const categoryEmojis: Record<string, string> = {
   "skin-care-beauty": "✨",
   "sleep-relaxation": "😴",
   "first-aid": "🩹",
+  "k-beauty": "🇰🇷",
+  "k-beauty-cleansers": "🧴",
+  "k-beauty-toners-essences": "💧",
+  "k-beauty-serums-ampoules": "💜",
+  "k-beauty-moisturizers": "🧊",
+  "k-beauty-sunscreen": "☀️",
+  "k-beauty-masks": "🎭",
+  "acne-treatments": "🔬",
+  "moisturizing-creams": "🧴",
+  multivitamins: "💊",
+  "vitamin-c": "🍋",
+  glutathione: "✨",
 };
 
 export default async function Home() {
-  const [articles, categories] = await Promise.all([
-    getPublishedArticles(),
+  const [trends, categories] = await Promise.all([
+    listTrendsByStatus("published", 3),
     getCategories(),
   ]);
 
   return (
     <div className="flex flex-col">
-      {/* Hero */}
-      <section className="bg-gradient-to-b from-primary/5 to-background pt-5 pb-0">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
-              Trusted OTC Medication
-              <br />
-              <span className="text-primary">Recommendations</span>
+      {/* Hero — compact, search-focused */}
+      <section className="bg-gradient-to-b from-primary/5 to-background pb-2 pt-10">
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+          <div className="flex items-center justify-center gap-2">
+            <Pill className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Dr.pharmacist
             </h1>
-            <p className="mt-6 text-lg leading-8 text-muted-foreground">
-              Expert pharmacist-reviewed guides to help you choose the right
-              over-the-counter medications. Evidence-based, unbiased, and always
-              up to date.
-            </p>
           </div>
-        </div>
-      </section>
-
-      {/* Main 2-column area: Compare sidebar (left, desktop) + Lookup & Latest Articles (right) */}
-      <section className="pt-8 pb-4">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-            {/* Left column — Compare by Category sidebar (desktop only) */}
-            <aside className="hidden lg:block">
-              <CompareSidebar
-                categories={categories}
-                categoryEmojis={categoryEmojis}
-              />
-            </aside>
-
-            {/* Right column — Product Lookup + mobile Compare chips + Latest Articles */}
-            <div className="space-y-8">
-              <ProductLookup />
-
-              {/* Mobile-only horizontal scroll chips between Lookup and Articles */}
-              <div className="lg:hidden">
-                <CompareChips
-                  categories={categories}
-                  categoryEmojis={categoryEmojis}
-                />
-              </div>
-
-              {articles.length > 0 && (
-                <div>
-                  <h2 className="text-2xl font-bold">Latest Articles</h2>
-                  <p className="mt-2 text-muted-foreground">
-                    Fresh pharmacist-reviewed medication guides
-                  </p>
-                  <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                    {articles.slice(0, 3).map((article) => (
-                      <Link key={article.id} href={`/${article.slug}`}>
-                        <Card className="h-full transition-colors hover:bg-accent">
-                          <CardHeader>
-                            {article.category && (
-                              <span className="text-xs font-medium text-primary">
-                                {(article.category as any).name ?? (article.category as any)[0]?.name}
-                              </span>
-                            )}
-                            <CardTitle className="text-lg leading-snug">
-                              {article.title}
-                            </CardTitle>
-                          </CardHeader>
-                          <CardContent>
-                            <p className="text-sm text-muted-foreground line-clamp-2">
-                              {article.excerpt}
-                            </p>
-                            <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
-                              {article.published_at && (
-                                <span className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  {new Date(article.published_at).toLocaleDateString(
-                                    "en-US",
-                                    {
-                                      month: "short",
-                                      day: "numeric",
-                                      year: "numeric",
-                                    }
-                                  )}
-                                </span>
-                              )}
-                              {article.reading_time_minutes && (
-                                <span className="flex items-center gap-1">
-                                  <Clock className="h-3 w-3" />
-                                  {article.reading_time_minutes} min read
-                                </span>
-                              )}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </Link>
-                    ))}
-                  </div>
-                  {articles.length > 3 && (
-                    <div className="mt-4 flex justify-center">
-                      <Button variant="outline" render={<Link href="/guides" />}>
-                        More Articles
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories */}
-      <section className="mt-5 border-t bg-muted/30 pt-5 pb-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <h2 className="text-center text-2xl font-bold">
-            Browse by Category
-          </h2>
-          <p className="mt-2 text-center text-muted-foreground">
-            Find the right medication for your needs
+          <p className="mt-3 text-lg text-muted-foreground">
+            Trending in Health &amp; Beauty — AI-analyzed, pharmacist-reviewed
           </p>
-          <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {categories.map((category) => (
+
+          {/* Hero search bar */}
+          <div className="mx-auto mt-6 max-w-xl">
+            <HomeSearchBar />
+          </div>
+        </div>
+      </section>
+
+      {/* Today's Trends */}
+      <section className="py-10">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-2xl font-bold">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Trending Now
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              render={<Link href="/trending" />}
+            >
+              View All
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+
+          {trends.length > 0 ? (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {trends.map((trend) => (
+                <TrendCard key={trend.id} trend={trend} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+              <TrendingUp className="mx-auto h-8 w-8 opacity-50" />
+              <p className="mt-2">No trends published yet.</p>
+              <p className="text-sm">
+                Check back soon — new trends are analyzed weekly.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* Browse by Category */}
+      <section className="border-t bg-muted/30 py-10">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <h2 className="text-center text-xl font-bold">Browse by Category</h2>
+          <div className="mt-6 flex flex-wrap justify-center gap-2">
+            {categories.map((cat) => (
               <Link
-                key={category.id}
-                href={`/categories/${category.slug}`}
+                key={cat.id}
+                href={`/categories/${cat.slug}`}
+                className="flex items-center gap-2 rounded-full border bg-background px-4 py-2 text-sm transition-colors hover:bg-accent"
               >
-                <div className="flex items-center gap-3 rounded-lg border bg-background p-4 transition-colors hover:bg-accent">
-                  <span className="text-2xl">
-                    {categoryEmojis[category.slug] ?? "💊"}
-                  </span>
-                  <span className="font-medium">{category.name}</span>
-                </div>
+                <span>{categoryEmojis[cat.slug] ?? "💊"}</span>
+                <span>{cat.name}</span>
               </Link>
             ))}
           </div>
         </div>
       </section>
-
-      {/* Features */}
-      <section className="border-t py-16">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6">
-          <div className="grid gap-8 sm:grid-cols-3">
-            <div className="flex flex-col items-center text-center">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <ShieldCheck className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="mt-4 font-semibold">Dr.pharmacist Verified</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Every article is reviewed and approved by a licensed pharmacist
-                with real clinical experience.
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <BookOpen className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="mt-4 font-semibold">Evidence-Based</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Recommendations backed by FDA guidelines, clinical studies, and
-                professional expertise.
-              </p>
-            </div>
-            <div className="flex flex-col items-center text-center">
-              <div className="rounded-lg bg-primary/10 p-3">
-                <Search className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="mt-4 font-semibold">Easy to Understand</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Complex medication information simplified into clear, actionable
-                advice for everyday decisions.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
     </div>
+  );
+}
+
+function TrendCard({ trend }: { trend: TrendTopicRow }) {
+  if (!trend.slug) return null;
+
+  return (
+    <Link
+      href={`/trending/${trend.slug}`}
+      className="group block rounded-lg border p-5 transition-all hover:border-primary/30 hover:shadow-md"
+    >
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="text-xs">
+          <TrendingUp className="mr-1 h-3 w-3" />
+          {trend.rankType === "rising" ? "Rising" : "Top"}
+        </Badge>
+        <Badge
+          variant="secondary"
+          className="text-xs"
+        >
+          {trend.category === "health" ? "Health" : "Beauty"}
+        </Badge>
+        {!trend.pharmacistReviewed && (
+          <Badge
+            variant="outline"
+            className="border-amber-300 text-xs text-amber-700"
+          >
+            <AlertTriangle className="mr-1 h-3 w-3" />
+            AI
+          </Badge>
+        )}
+      </div>
+
+      <h3 className="mt-3 font-semibold leading-snug group-hover:text-primary">
+        {trend.queryText}
+      </h3>
+
+      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+        <Clock className="h-3 w-3" />
+        <span>~1 min read</span>
+        <span>·</span>
+        <span>Week of {trend.detectedWeek}</span>
+      </div>
+    </Link>
   );
 }

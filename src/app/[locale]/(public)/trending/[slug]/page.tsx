@@ -93,6 +93,22 @@ export default async function TrendPage({ params }: TrendPageProps) {
 
   const leadText: string = synthesis?.leadExplanation ?? "";
 
+  // Extract entity keywords for auto-linking in article body
+  const understanding = analysis.understandingJsonb as {
+    entities?: {
+      drugs?: string[];
+      genericIngredients?: string[];
+      symptoms?: string[];
+      conditions?: string[];
+    };
+  } | null;
+  const entityKeywords: string[] = [
+    ...(understanding?.entities?.drugs ?? []),
+    ...(understanding?.entities?.genericIngredients ?? []),
+    ...(understanding?.entities?.symptoms ?? []),
+    ...(understanding?.entities?.conditions ?? []),
+  ].filter((k) => k.length >= 3);
+
   return (
     <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
       {/* ===== Hook — "Why you're seeing this" ===== */}
@@ -153,7 +169,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
             <ConfidenceBadge level={synthesis.confidence} />
           </div>
           <div className="mt-3 leading-relaxed text-muted-foreground">
-            <CitedText text={leadText} sources={sources} />
+            <CitedText text={leadText} sources={sources} keywords={entityKeywords} />
           </div>
         </section>
       )}
@@ -173,7 +189,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
               <li key={i} className="flex items-start gap-2">
                 <Check className="mt-0.5 h-4 w-4 shrink-0 text-green-600" />
                 <span className="text-sm">
-                  <CitedText text={takeaway} sources={sources} />
+                  <CitedText text={takeaway} sources={sources} keywords={entityKeywords} />
                 </span>
               </li>
             ))}
@@ -382,22 +398,30 @@ function ConfidenceBadge({ level }: { level: "high" | "medium" | "low" }) {
 
 /**
  * Render text with inline [N] citation markers as superscript links
- * that show the source title on hover.
+ * and entity keywords as topic page links (/topics/[keyword]).
+ *
+ * Keywords are linked only on first occurrence to avoid visual clutter.
  */
 function CitedText({
   text,
   sources,
+  keywords = [],
 }: {
   text: string;
   sources: SourceFragment[];
+  keywords?: string[];
 }) {
+  // Step 1: Split by citation markers [N]
   const parts = text.split(/(\[\d+\])/g);
+  const linkedKeywords = new Set<string>();
+
   return (
     <>
       {parts.map((part, i) => {
-        const match = part.match(/^\[(\d+)\]$/);
-        if (match) {
-          const idx = parseInt(match[1], 10);
+        // Citation marker
+        const citMatch = part.match(/^\[(\d+)\]$/);
+        if (citMatch) {
+          const idx = parseInt(citMatch[1], 10);
           const source = sources[idx];
           return (
             <sup key={i} className="mx-0.5">
@@ -413,7 +437,17 @@ function CitedText({
             </sup>
           );
         }
-        return <span key={i}>{part}</span>;
+
+        // Apply keyword linking to plain text parts
+        if (keywords.length === 0) {
+          return <span key={i}>{part}</span>;
+        }
+
+        return (
+          <span key={i}>
+            {linkKeywordsInText(part, keywords, linkedKeywords)}
+          </span>
+        );
       })}
     </>
   );
@@ -920,4 +954,50 @@ function SourceGroup({
       </ol>
     </div>
   );
+}
+
+/**
+ * Replace first occurrence of each keyword in text with a topic link.
+ * Uses case-insensitive matching. Each keyword is linked only once
+ * (tracked via linkedKeywords set that persists across calls).
+ */
+function linkKeywordsInText(
+  text: string,
+  keywords: string[],
+  linkedKeywords: Set<string>
+): React.ReactNode[] {
+  // Filter to keywords not yet linked and sort by length (longest first
+  // to avoid partial matches like "vitamin" matching before "vitamin c")
+  const remaining = keywords
+    .filter((k) => k.length >= 3 && !linkedKeywords.has(k.toLowerCase()))
+    .sort((a, b) => b.length - a.length);
+
+  if (remaining.length === 0) return [text];
+
+  // Try to find and link the first matching keyword
+  for (const keyword of remaining) {
+    const lower = text.toLowerCase();
+    const idx = lower.indexOf(keyword.toLowerCase());
+    if (idx === -1) continue;
+
+    linkedKeywords.add(keyword.toLowerCase());
+    const before = text.slice(0, idx);
+    const matched = text.slice(idx, idx + keyword.length);
+    const after = text.slice(idx + keyword.length);
+    const slug = keyword.toLowerCase().replace(/\s+/g, "-");
+
+    return [
+      before,
+      <Link
+        key={`kw-${slug}`}
+        href={`/topics/${encodeURIComponent(slug)}`}
+        className="font-medium text-primary underline decoration-dotted hover:text-primary/80"
+      >
+        {matched}
+      </Link>,
+      ...linkKeywordsInText(after, keywords, linkedKeywords),
+    ];
+  }
+
+  return [text];
 }
