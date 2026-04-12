@@ -5,6 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getPublishedArticles } from "@/lib/actions/articles";
 import { getCategories } from "@/lib/actions/categories";
 import { ProductLookup } from "@/components/home/product-lookup";
+import { CompareSidebar } from "@/components/home/compare-sidebar";
+import { CompareChips } from "@/components/home/compare-chips";
 
 const categoryEmojis: Record<string, string> = {
   "pain-relief": "💊",
@@ -44,76 +46,94 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Product Lookup — the "wow moment" entry point */}
+      {/* Main 2-column area: Compare sidebar (left, desktop) + Lookup & Latest Articles (right) */}
       <section className="pt-8 pb-4">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <ProductLookup />
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
+            {/* Left column — Compare by Category sidebar (desktop only) */}
+            <aside className="hidden lg:block">
+              <CompareSidebar
+                categories={categories}
+                categoryEmojis={categoryEmojis}
+              />
+            </aside>
+
+            {/* Right column — Product Lookup + mobile Compare chips + Latest Articles */}
+            <div className="space-y-8">
+              <ProductLookup />
+
+              {/* Mobile-only horizontal scroll chips between Lookup and Articles */}
+              <div className="lg:hidden">
+                <CompareChips
+                  categories={categories}
+                  categoryEmojis={categoryEmojis}
+                />
+              </div>
+
+              {articles.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-bold">Latest Articles</h2>
+                  <p className="mt-2 text-muted-foreground">
+                    Fresh pharmacist-reviewed medication guides
+                  </p>
+                  <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                    {articles.slice(0, 3).map((article) => (
+                      <Link key={article.id} href={`/${article.slug}`}>
+                        <Card className="h-full transition-colors hover:bg-accent">
+                          <CardHeader>
+                            {article.category && (
+                              <span className="text-xs font-medium text-primary">
+                                {(article.category as any).name ?? (article.category as any)[0]?.name}
+                              </span>
+                            )}
+                            <CardTitle className="text-lg leading-snug">
+                              {article.title}
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent>
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {article.excerpt}
+                            </p>
+                            <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
+                              {article.published_at && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  {new Date(article.published_at).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    }
+                                  )}
+                                </span>
+                              )}
+                              {article.reading_time_minutes && (
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {article.reading_time_minutes} min read
+                                </span>
+                              )}
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    ))}
+                  </div>
+                  {articles.length > 3 && (
+                    <div className="mt-4 flex justify-center">
+                      <Button variant="outline" render={<Link href="/guides" />}>
+                        More Articles
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </section>
-
-      {/* Latest Articles */}
-      {articles.length > 0 && (
-        <section className="pt-5 pb-0">
-          <div className="mx-auto max-w-6xl px-4 sm:px-6">
-            <h2 className="text-2xl font-bold">Latest Articles</h2>
-            <p className="mt-2 text-muted-foreground">
-              Fresh pharmacist-reviewed medication guides
-            </p>
-            <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {articles.slice(0, 3).map((article) => (
-                <Link key={article.id} href={`/${article.slug}`}>
-                  <Card className="h-full transition-colors hover:bg-accent">
-                    <CardHeader>
-                      {article.category && (
-                        <span className="text-xs font-medium text-primary">
-                          {(article.category as any).name ?? (article.category as any)[0]?.name}
-                        </span>
-                      )}
-                      <CardTitle className="text-lg leading-snug">
-                        {article.title}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {article.excerpt}
-                      </p>
-                      <div className="mt-4 flex items-center gap-3 text-xs text-muted-foreground">
-                        {article.published_at && (
-                          <span className="flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {new Date(article.published_at).toLocaleDateString(
-                              "en-US",
-                              {
-                                month: "short",
-                                day: "numeric",
-                                year: "numeric",
-                              }
-                            )}
-                          </span>
-                        )}
-                        {article.reading_time_minutes && (
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {article.reading_time_minutes} min read
-                          </span>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-            {articles.length > 3 && (
-              <div className="mt-4 flex justify-center">
-                <Button variant="outline" render={<Link href="/guides" />}>
-                  More Articles
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-        </section>
-      )}
 
       {/* Categories */}
       <section className="mt-5 border-t bg-muted/30 pt-5 pb-16">

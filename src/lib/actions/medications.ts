@@ -248,3 +248,222 @@ export async function deleteMedication(id: number) {
   if (error) throw new Error(error.message);
   revalidatePath("/medications");
 }
+
+// ============================================================
+// Public compare page queries
+// ============================================================
+
+/**
+ * Row shape returned by the public compare page. Includes the compare
+ * feature fields added in migration 003 (pros/cons/verdict/etc.) in
+ * addition to the base medication fields.
+ */
+export interface CompareMedicationRow {
+  id: number;
+  name: string;
+  slug: string;
+  generic_name: string | null;
+  brand_names: string[] | null;
+  description: string | null;
+  active_ingredients: unknown;
+  dosage_forms: string[] | null;
+  warnings: string | null;
+  side_effects: string | null;
+  image_url: string | null;
+  is_otc: boolean;
+  source: string;
+  fda_spl_id: string | null;
+  category_id: number | null;
+  purchase_links: unknown;
+  // Compare feature fields (migration 003)
+  pros: unknown;
+  cons: unknown;
+  verdict: string | null;
+  verdict_source_ids: number[] | null;
+  ingredient_analysis: unknown;
+  comparison_score: number | null;
+  scoring_rationale: string | null;
+  is_featured: boolean;
+  price_range: string | null;
+  price_range_min: string | null;
+  price_range_max: string | null;
+  price_currency: string | null;
+  price_updated_at: string | null;
+  recommended_for: string[] | null;
+  is_ai_drafted: boolean;
+  reviewed_at: string | null;
+  reviewed_by: string | null;
+  view_count: number;
+}
+
+/**
+ * Get all medications in a given category, sorted by comparison_score
+ * (featured + highest score first). Pharmacist-reviewed rows outrank
+ * FDA-only rows within the same score band.
+ *
+ * Used by `/compare/[category-slug]` — the public compare page.
+ */
+export async function getMedicationsByCategorySlug(
+  categorySlug: string
+): Promise<CompareMedicationRow[]> {
+  const supabase = await createClient();
+
+  // Resolve category → id first (clearer query, indexable)
+  const { data: category, error: catError } = await supabase
+    .from("categories")
+    .select("id, name, slug, description")
+    .eq("slug", categorySlug)
+    .maybeSingle();
+
+  if (catError) {
+    console.error("[medications] category lookup failed:", catError);
+    return [];
+  }
+  if (!category) return [];
+
+  const { data, error } = await supabase
+    .from("medications")
+    .select("*")
+    .eq("category_id", category.id)
+    .order("is_featured", { ascending: false })
+    .order("comparison_score", { ascending: false, nullsFirst: false })
+    .order("name");
+
+  if (error) {
+    console.error("[medications] byCategory failed:", error);
+    return [];
+  }
+
+  return (data ?? []) as CompareMedicationRow[];
+}
+
+/**
+ * Get only the featured medications across all categories, globally
+ * sorted by comparison_score. Used by the `/compare` hub page's
+ * "Editor's Picks" section.
+ */
+export async function getFeaturedMedications(
+  limit = 12
+): Promise<CompareMedicationRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("medications")
+    .select("*")
+    .eq("is_featured", true)
+    .order("comparison_score", { ascending: false, nullsFirst: false })
+    .order("name")
+    .limit(limit);
+
+  if (error) {
+    console.error("[medications] featured failed:", error);
+    return [];
+  }
+  return (data ?? []) as CompareMedicationRow[];
+}
+
+/**
+ * Get a single medication by slug for the product detail page
+ * `/compare/[category-slug]/[medication-slug]`. Returns null if
+ * the slug doesn't match or RLS blocks the read.
+ */
+export async function getMedicationBySlug(
+  slug: string
+): Promise<CompareMedicationRow | null> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("medications")
+    .select("*")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[medications] bySlug failed:", error);
+    return null;
+  }
+  return (data as CompareMedicationRow | null) ?? null;
+}
+
+/**
+ * Row shape for medication_references, matching migration 003.
+ * All fields use snake_case to mirror the DB; the UI layer can
+ * re-alias if needed.
+ */
+export interface MedicationReferenceRow {
+  id: number;
+  medication_id: number;
+  source_type: string;
+  tier_level: number;
+  title: string;
+  url: string;
+  authors: string | null;
+  published_at: string | null;
+  accessed_at: string | null;
+  citation_text: string | null;
+  sort_order: number;
+}
+
+/**
+ * Fetch all references for a medication, sorted for display.
+ * RLS allows public SELECT on `medication_references`.
+ */
+export async function getMedicationReferences(
+  medicationId: number
+): Promise<MedicationReferenceRow[]> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("medication_references")
+    .select("*")
+    .eq("medication_id", medicationId)
+    .order("tier_level", { ascending: true })
+    .order("sort_order", { ascending: true });
+
+  if (error) {
+    console.error("[medications] references failed:", error);
+    return [];
+  }
+  return (data ?? []) as MedicationReferenceRow[];
+}
+
+/**
+ * Fetch the pharmacist profile for the reviewer of a medication.
+ * Used to render "Last reviewed by Dr. X" in the trust bar.
+ */
+export async function getMedicationReviewer(
+  reviewedBy: string | null
+): Promise<{ display_name: string; title: string | null; slug: string } | null> {
+  if (!reviewedBy) return null;
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("pharmacist_profiles")
+    .select("display_name, title, slug")
+    .eq("id", reviewedBy)
+    .maybeSingle();
+  if (error || !data) return null;
+  return data;
+}
+
+/**
+ * Count medications per category, for the `/compare` hub grid.
+ */
+export async function getMedicationCountsByCategory(): Promise<
+  Record<number, number>
+> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("medications")
+    .select("category_id");
+
+  if (error) {
+    console.error("[medications] counts failed:", error);
+    return {};
+  }
+
+  const counts: Record<number, number> = {};
+  for (const row of data ?? []) {
+    const id = (row as { category_id: number | null }).category_id;
+    if (id !== null && id !== undefined) {
+      counts[id] = (counts[id] ?? 0) + 1;
+    }
+  }
+  return counts;
+}

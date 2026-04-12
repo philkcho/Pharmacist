@@ -2,15 +2,23 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { generateObject } from "ai";
+import { google } from "@ai-sdk/google";
 import { getOrFetchMedication } from "@/lib/actions/medications";
 
 /**
  * Public result shape returned from the Product Lookup widget.
  * Distinguishes between pharmacist-reviewed records (full trust),
  * FDA-only synced records (medium trust, no pharmacist review yet),
- * and misses (no data available).
+ * AI-generated analysis (low trust, clearly labeled), and misses
+ * (no data available at all).
  */
-export type LookupResultType = "pharmacist_reviewed" | "fda_only" | "miss";
+export type LookupResultType =
+  | "pharmacist_reviewed"
+  | "fda_only"
+  | "ai_generated"
+  | "miss";
 
 export interface LookupResultSuccess {
   type: "pharmacist_reviewed" | "fda_only";
@@ -40,7 +48,45 @@ export interface LookupResultMiss {
   message: string;
 }
 
-export type LookupResult = LookupResultSuccess | LookupResultMiss;
+/**
+ * Gemini-generated analysis used as a fallback when DB + openFDA both
+ * miss. This is NEVER cached, NEVER written to medications, and MUST
+ * render with a prominent "not yet reviewed" warning banner on the
+ * client. See section 14.5 of docs/compare-feature.md.
+ */
+export interface AiAnalysis {
+  productName: string;
+  isLikelyOtc: boolean;
+  summary: string;
+  commonUses: string[];
+  activeIngredients: string[];
+  keyWarnings: string[];
+  confidence: "high" | "medium" | "low";
+  suggestedSources: Array<{
+    title: string;
+    url: string;
+    type:
+      | "fda_label"
+      | "pubmed"
+      | "cdc"
+      | "who"
+      | "nih_ods"
+      | "nih_medlineplus"
+      | "other_authoritative";
+  }>;
+}
+
+export interface LookupResultAiGenerated {
+  type: "ai_generated";
+  lookupId: number | null;
+  query: string;
+  analysis: AiAnalysis;
+}
+
+export type LookupResult =
+  | LookupResultSuccess
+  | LookupResultAiGenerated
+  | LookupResultMiss;
 
 /**
  * Log a lookup attempt to product_lookups. Failures are swallowed —
@@ -71,6 +117,99 @@ async function logLookupAttempt(params: {
     return data?.id ?? null;
   } catch (err) {
     console.warn("[lookup] log threw:", err);
+    return null;
+  }
+}
+
+/**
+ * Zod schema matching the `AiAnalysis` interface. Used by Gemini's
+ * `generateObject` to enforce structured output.
+ */
+const AiAnalysisSchema = z.object({
+  productName: z
+    .string()
+    .describe("Standardized product name, corrected if the input has typos"),
+  isLikelyOtc: z
+    .boolean()
+    .describe(
+      "Is this likely an over-the-counter medication, supplement, or cosmetic product?"
+    ),
+  summary: z
+    .string()
+    .describe(
+      "Plain English consumer description, 2-3 sentences. Avoid clinical jargon."
+    ),
+  commonUses: z
+    .array(z.string())
+    .describe("3-5 common reasons consumers use this product"),
+  activeIngredients: z
+    .array(z.string())
+    .describe(
+      "Active ingredients you are confident about. Return an empty array if uncertain."
+    ),
+  keyWarnings: z
+    .array(z.string())
+    .describe(
+      "3-5 consumer-facing warnings, drug interactions, or contraindications"
+    ),
+  confidence: z
+    .enum(["high", "medium", "low"])
+    .describe(
+      "Your confidence in this analysis. Use 'low' for unfamiliar or ambiguous products."
+    ),
+  suggestedSources: z
+    .array(
+      z.object({
+        title: z.string().describe("Source title"),
+        url: z
+          .string()
+          .describe("Real URL to an authoritative institution page"),
+        type: z.enum([
+          "fda_label",
+          "pubmed",
+          "cdc",
+          "who",
+          "nih_ods",
+          "nih_medlineplus",
+          "other_authoritative",
+        ]),
+      })
+    )
+    .describe("3-5 authoritative source suggestions for verification"),
+});
+
+/**
+ * Ask Gemini for a consumer-friendly analysis of an unknown product.
+ * Only called when the DB + openFDA pipeline returns nothing. Never
+ * cached, never written to `medications`. Returns null on any error
+ * so the caller can gracefully fall back to a plain "miss" result.
+ */
+async function generateAiAnalysis(query: string): Promise<AiAnalysis | null> {
+  try {
+    const { object } = await generateObject({
+      model: google("gemini-2.5-flash"),
+      maxRetries: 0,
+      schema: AiAnalysisSchema,
+      system: `You are a licensed pharmacist (PharmD) helping a consumer understand an OTC product they searched for. A human pharmacist will review your analysis before it is ever published on the site, but users may see a draft version in the meantime — so be honest and conservative.
+
+Critical rules:
+- Target an 8th-grade reading level. No clinical jargon.
+- Frame information around practical consumer questions.
+- Never fabricate PubMed IDs, DOIs, or FDA document numbers.
+- Suggested source URLs must be REAL pages from authoritative institutions
+  (FDA DailyMed, PubMed, CDC, NIH ODS, NIH MedlinePlus, WHO). If you are
+  unsure of a specific study URL, use the institution's search page
+  (e.g. https://dailymed.nlm.nih.gov/dailymed/search.cfm?query=...).
+- If the product is not a known OTC medication/supplement/skincare item,
+  set confidence to "low" and say so in the summary.
+- Do not recommend prescription medications.`,
+      prompt: `The consumer searched for: "${query}"
+
+Return a structured analysis. Be honest about confidence — a pharmacist will double-check every claim before it is shown to anyone.`,
+    });
+    return object as AiAnalysis;
+  } catch (err) {
+    console.warn("[lookup] AI fallback failed:", err);
     return null;
   }
 }
@@ -127,11 +266,27 @@ export async function lookupProduct(query: string): Promise<LookupResult> {
   const row = await getOrFetchMedication(trimmed);
 
   if (!row) {
+    // Always log the DB/FDA miss for analytics, regardless of whether
+    // AI fallback succeeds afterward. Curation priority = raw miss rate.
     const lookupId = await logLookupAttempt({
       queryText: normalized,
       resultType: "miss",
       matchedMedicationId: null,
     });
+
+    // Try an AI fallback so the user sees something rather than a dead end.
+    // This is clearly labeled as AI-generated on the client (see the
+    // `LookupResultAiGenerated` rendering in product-lookup.tsx).
+    const aiAnalysis = await generateAiAnalysis(trimmed);
+    if (aiAnalysis) {
+      return {
+        type: "ai_generated",
+        lookupId,
+        query: trimmed,
+        analysis: aiAnalysis,
+      };
+    }
+
     return {
       type: "miss",
       lookupId,

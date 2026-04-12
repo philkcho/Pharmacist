@@ -85,6 +85,25 @@ export const medicationSourceTypeEnum = pgEnum("medication_source_type", [
   "other_authoritative",
 ]);
 
+// Trend pipeline enums (matches migration 005).
+export const trendSourceEnum = pgEnum("trend_source", ["google_trends"]);
+
+export const trendCategoryEnum = pgEnum("trend_category", [
+  "health",
+  "beauty_fitness",
+  "other",
+]);
+
+export const trendRankTypeEnum = pgEnum("trend_rank_type", ["top", "rising"]);
+
+export const trendStatusEnum = pgEnum("trend_status", [
+  "pending",
+  "analyzing",
+  "published",
+  "rejected",
+  "archived",
+]);
+
 // Categories
 export const categories = pgTable(
   "categories",
@@ -379,6 +398,93 @@ export const userRoles = pgTable(
   (table) => [uniqueIndex("idx_user_roles_unique").on(table.userId, table.role)]
 );
 
+// Trend Topics — one row per distinct trending query per weekly
+// ingestion. Populated by the weekly cron ingestion job from
+// Google Trends. Deduped at insert time via the unique constraint
+// on (source, normalized_query, detected_week).
+export const trendTopics = pgTable(
+  "trend_topics",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    source: trendSourceEnum().notNull().default("google_trends"),
+    category: trendCategoryEnum().notNull(),
+    rankType: trendRankTypeEnum("rank_type").notNull(),
+    rankPosition: smallint("rank_position"),
+    queryText: text("query_text").notNull(),
+    normalizedQuery: text("normalized_query").notNull(),
+    volumeScore: integer("volume_score"),
+    detectedWeek: date("detected_week").notNull(),
+    detectedAt: timestamp("detected_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    rawPayload: jsonb("raw_payload"),
+
+    status: trendStatusEnum().notNull().default("pending"),
+    analyzedAt: timestamp("analyzed_at", { withTimezone: true }),
+    analysisError: text("analysis_error"),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+    slug: text(),
+
+    // Post-publish pharmacist review overlay
+    pharmacistReviewed: boolean("pharmacist_reviewed")
+      .notNull()
+      .default(false),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+    reviewedBy: uuid("reviewed_by").references(() => pharmacistProfiles.id, {
+      onDelete: "set null",
+    }),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("trend_topics_unique_per_week").on(
+      table.source,
+      table.normalizedQuery,
+      table.detectedWeek
+    ),
+    uniqueIndex("trend_topics_slug_unique").on(table.slug),
+    index("idx_trend_topics_status_created").on(table.status, table.createdAt),
+    index("idx_trend_topics_category_rank").on(
+      table.category,
+      table.rankType,
+      table.detectedWeek
+    ),
+    index("idx_trend_topics_dedupe").on(table.normalizedQuery, table.detectedAt),
+  ]
+);
+
+// Trend Analyses — 1:1 with trend_topics. Large JSONB blobs kept out
+// of the hot-path trend_topics queries. Populated by the analysis
+// worker running Layer 1 (classify) + Layer 2 (retrieve) + Layer 3
+// (synthesize) on each pending topic.
+export const trendAnalyses = pgTable("trend_analyses", {
+  trendTopicId: bigint("trend_topic_id", { mode: "number" })
+    .primaryKey()
+    .references(() => trendTopics.id, { onDelete: "cascade" }),
+  understandingJsonb: jsonb("understanding_jsonb").notNull(),
+  sourcesJsonb: jsonb("sources_jsonb").notNull(),
+  synthesisJsonb: jsonb("synthesis_jsonb"),
+  productMatchesJsonb: jsonb("product_matches_jsonb"),
+  marketReactionJsonb: jsonb("market_reaction_jsonb"),
+  aiModel: text("ai_model").notNull(),
+  generatedAt: timestamp("generated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+
+  // Pharmacist edit overlay
+  pharmacistNotes: text("pharmacist_notes"),
+  pharmacistOverrides: jsonb("pharmacist_overrides"),
+
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
 // Relations
 export const categoriesRelations = relations(categories, ({ one, many }) => ({
   parent: one(categories, {
@@ -468,6 +574,30 @@ export const lookupReviewRequestsRelations = relations(
     assignedTo: one(pharmacistProfiles, {
       fields: [lookupReviewRequests.assignedTo],
       references: [pharmacistProfiles.id],
+    }),
+  })
+);
+
+export const trendTopicsRelations = relations(
+  trendTopics,
+  ({ one }) => ({
+    analysis: one(trendAnalyses, {
+      fields: [trendTopics.id],
+      references: [trendAnalyses.trendTopicId],
+    }),
+    reviewedBy: one(pharmacistProfiles, {
+      fields: [trendTopics.reviewedBy],
+      references: [pharmacistProfiles.id],
+    }),
+  })
+);
+
+export const trendAnalysesRelations = relations(
+  trendAnalyses,
+  ({ one }) => ({
+    topic: one(trendTopics, {
+      fields: [trendAnalyses.trendTopicId],
+      references: [trendTopics.id],
     }),
   })
 );

@@ -21,6 +21,8 @@ import {
   Pill,
   ExternalLink,
   Sparkles,
+  Inbox,
+  TrendingUp,
 } from "lucide-react";
 
 const menuItems = [
@@ -48,6 +50,16 @@ const menuItems = [
     title: "Medications",
     href: "/medications",
     icon: Pill,
+  },
+  {
+    title: "Trends",
+    href: "/trends",
+    icon: TrendingUp,
+  },
+  {
+    title: "Review Requests",
+    href: "/review-requests",
+    icon: Inbox,
   },
 ];
 
