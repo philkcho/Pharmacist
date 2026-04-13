@@ -152,6 +152,13 @@ export interface Analysis {
    * days. Rendered as "Possible driver: …" chips in the Hook section.
    */
   trendDrivers: string[];
+  /**
+   * Catchy, curiosity-provoking headline (20–60 chars). Written
+   * like a magazine headline, NOT the raw search keyword.
+   * Examples: "Your Moisturizer Might Be Missing This Key Ingredient",
+   * "B12: The Vitamin 90% of Vegetarians Are Missing"
+   */
+  headline: string;
 }
 
 // ============================================================

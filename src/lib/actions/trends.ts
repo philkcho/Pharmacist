@@ -273,6 +273,33 @@ export async function listTrendsByStatus(
 }
 
 /**
+ * List published trends with headline from synthesis for display
+ * on homepage and trending index.
+ */
+export async function listPublishedTrendsWithHeadline(
+  limit = 10
+): Promise<Array<TrendTopicRow & { headline: string | null }>> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("trend_topics")
+    .select("*, trend_analyses(synthesis_jsonb)")
+    .eq("status", "published")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[trends] listPublishedTrendsWithHeadline failed:", error);
+    return [];
+  }
+
+  return ((data ?? []) as Array<TrendTopicDbRow & { trend_analyses: { synthesis_jsonb: unknown } | null }>).map((row) => {
+    const topic = dbRowToTopic(row);
+    const synth = row.trend_analyses?.synthesis_jsonb as { headline?: string } | null;
+    return { ...topic, headline: synth?.headline ?? null };
+  });
+}
+
+/**
  * Count unreviewed-but-published trends for the admin sidebar badge.
  */
 export async function countUnreviewedTrends(): Promise<number> {

@@ -160,7 +160,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
       </div>
 
       <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
-        {topic.queryText}
+        {synthesis?.headline ?? topic.queryText}
       </h1>
 
       {/* Trend drivers */}

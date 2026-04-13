@@ -10,7 +10,7 @@ import {
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { listTrendsByStatus, type TrendTopicRow } from "@/lib/actions/trends";
+import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import { getCategories } from "@/lib/actions/categories";
 import { HomeSearchBar } from "@/components/home/home-search-bar";
 
@@ -40,7 +40,7 @@ const categoryEmojis: Record<string, string> = {
 
 export default async function Home() {
   const [trends, categories] = await Promise.all([
-    listTrendsByStatus("published", 3),
+    listPublishedTrendsWithHeadline(3),
     getCategories(),
   ]);
 
@@ -124,7 +124,7 @@ export default async function Home() {
   );
 }
 
-function TrendCard({ trend }: { trend: TrendTopicRow }) {
+function TrendCard({ trend }: { trend: TrendTopicRow & { headline?: string | null } }) {
   if (!trend.slug) return null;
 
   return (
@@ -155,7 +155,7 @@ function TrendCard({ trend }: { trend: TrendTopicRow }) {
       </div>
 
       <h3 className="mt-3 font-semibold leading-snug group-hover:text-primary">
-        {trend.queryText}
+        {trend.headline ?? trend.queryText}
       </h3>
 
       <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">

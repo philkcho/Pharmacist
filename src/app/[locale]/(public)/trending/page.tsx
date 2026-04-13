@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { TrendingUp, AlertTriangle, Clock } from "lucide-react";
 import Link from "next/link";
-import { listTrendsByStatus, type TrendTopicRow } from "@/lib/actions/trends";
+import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 };
 
 export default async function TrendingIndexPage() {
-  const trends = await listTrendsByStatus("published", 50);
+  const trends = await listPublishedTrendsWithHeadline(50);
 
   const healthTrends = trends.filter((t) => t.category === "health");
   const beautyTrends = trends.filter((t) => t.category === "beauty_fitness");
@@ -63,7 +63,7 @@ export default async function TrendingIndexPage() {
   );
 }
 
-function TrendCard({ trend }: { trend: TrendTopicRow }) {
+function TrendCard({ trend }: { trend: TrendTopicRow & { headline?: string | null } }) {
   if (!trend.slug) return null;
 
   return (
@@ -74,7 +74,7 @@ function TrendCard({ trend }: { trend: TrendTopicRow }) {
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
           <h3 className="font-medium group-hover:text-blue-600 group-hover:underline">
-            {trend.queryText}
+            {trend.headline ?? trend.queryText}
           </h3>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge variant="outline" className="text-xs">

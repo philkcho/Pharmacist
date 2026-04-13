@@ -135,6 +135,17 @@ const SynthesisSchema = z.object({
     .describe(
       "0–3 short phrases naming WHY this query is trending right now, pulled ONLY from Layer 2 sources published within the last 30 days. Each phrase should be 3–10 words, like 'New PubMed study on melatonin and sleep onset' or 'FDA recall announcement on [brand]'. Empty array if no recent sources explain the spike."
     ),
+  headline: z
+    .string()
+    .describe(
+      "A catchy, curiosity-provoking headline for this trending topic (20–60 characters). " +
+      "Write it like a magazine or blog headline that makes people WANT to click — NOT the raw search keyword. " +
+      "Use patterns like: questions, surprising facts, numbered lists, myth-busting, or 'you might be wrong' hooks. " +
+      "Examples: 'Your Moisturizer Might Be Missing This Key Ingredient', " +
+      "'B12: The Vitamin 90% of Vegetarians Are Missing', " +
+      "'5 SPF Myths That Could Be Damaging Your Skin', " +
+      "'The One Ingredient Dermatologists Always Recommend'"
+    ),
 });
 
 // ============================================================
@@ -244,7 +255,14 @@ Prohibited:
   - Citing sources you weren't given.
   - Diagnosing specific users or promising outcomes ("this will cure your headache").
   - Going outside OTC / supplement / skincare scope into prescription dosing or disease management.
-  - Putting anything in trendDrivers that isn't traceable to a source published within the last 30 days.`;
+  - Putting anything in trendDrivers that isn't traceable to a source published within the last 30 days.
+
+headline rules:
+  - Write a catchy, curiosity-provoking headline (20–60 characters).
+  - Do NOT just repeat the raw search keyword. Transform it into a magazine-style headline.
+  - Use proven click-driving patterns: questions, surprising stats, myth-busting, "you might be wrong" hooks, numbered tips.
+  - Good: "Your Moisturizer Might Be Missing This Key Ingredient"
+  - Bad: "Face Moisturizer" (this is just the keyword, not a headline)`;
 
 function buildPrompt(input: SynthesisInput): string {
   const { understanding, sources, productMatches, marketReaction } = input;
@@ -410,6 +428,7 @@ export async function synthesizeAnalysis(
     keyTakeaways: rawAnalysis.keyTakeaways,
     redFlags: rawAnalysis.redFlags,
     trendDrivers: filterFreshTrendDrivers(rawAnalysis.trendDrivers, sources),
+    headline: rawAnalysis.headline,
   };
 
   return { kind: "analysis", analysis };
