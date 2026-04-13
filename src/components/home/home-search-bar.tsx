@@ -23,7 +23,7 @@ export function HomeSearchBar() {
         type="text"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Search health topics, products, ingredients..."
+        placeholder="Ask about health & skincare — e.g. vitamin C, moisturizer, sunscreen"
         className="h-12 rounded-full pl-10 pr-4 text-base"
       />
     </form>
