@@ -1,4 +1,5 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   FlaskConical,
   ShieldAlert,
@@ -62,13 +63,43 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
               <Pill className="h-12 w-12 text-muted-foreground/30" />
             </div>
           )}
-          <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">
-              {data.productName}
-            </h1>
-            {data.genericName && (
-              <p className="mt-1 text-muted-foreground">{data.genericName}</p>
-            )}
+          <div className="flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold sm:text-3xl">
+                  {data.productName}
+                </h1>
+                {data.genericName && (
+                  <p className="mt-1 text-muted-foreground">{data.genericName}</p>
+                )}
+              </div>
+              {/* Buy button — shows the referrer retailer */}
+              {data.purchaseOptions.length > 0 ? (
+                <a
+                  href={`/api/click/${data.purchaseOptions[0].linkId}?ref=analysis_page`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button size="sm">
+                    <ShoppingCart className="mr-1.5 h-4 w-4" />
+                    Buy on {data.purchaseOptions[0].retailerName}
+                    <ExternalLink className="ml-1 h-3 w-3" />
+                  </Button>
+                </a>
+              ) : data.retailerSearchUrls.length > 0 ? (
+                <a
+                  href={data.retailerSearchUrls[0].url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button size="sm">
+                    <ShoppingCart className="mr-1.5 h-4 w-4" />
+                    Buy on {data.retailerSearchUrls[0].name}
+                    <ExternalLink className="ml-1 h-3 w-3" />
+                  </Button>
+                </a>
+              ) : null}
+            </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {data.productType !== "unknown" && (
                 <Badge variant="outline">
@@ -284,12 +315,14 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
         </div>
       </div>
 
-      {/* Sticky buy bar — follows scroll */}
-      <StickyBuyBar
-        productName={data.productName}
-        retailers={data.retailerSearchUrls}
-        purchaseOptions={data.purchaseOptions}
-      />
+      {/* Sticky buy bar — follows scroll, shows referrer retailer */}
+      {(data.purchaseOptions.length > 0 || data.retailerSearchUrls.length > 0) && (
+        <StickyBuyBar
+          productName={data.productName}
+          retailers={data.retailerSearchUrls.slice(0, 1)}
+          purchaseOptions={data.purchaseOptions.slice(0, 1)}
+        />
+      )}
     </>
   );
 }
