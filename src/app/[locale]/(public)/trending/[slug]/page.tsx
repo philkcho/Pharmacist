@@ -191,6 +191,21 @@ export default async function TrendPage({ params }: TrendPageProps) {
         </div>
       )}
 
+      {/* ===== Shop This Topic — link to /topics/[keyword] ===== */}
+      <div className="mt-6">
+        <Link
+          href={`/topics/${encodeURIComponent(topic.normalizedQuery ?? topic.queryText.toLowerCase().replace(/\s+/g, "-"))}`}
+          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-5 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/10 hover:shadow-sm sm:w-auto"
+        >
+          <ShoppingCart className="h-4 w-4" />
+          Shop Related Products
+          <ChevronRight className="h-4 w-4" />
+        </Link>
+        <p className="mt-1.5 text-xs text-muted-foreground">
+          Top picks from Amazon, iHerb &amp; more — reviewed by pharmacists
+        </p>
+      </div>
+
       {/* ===== Section 1 — The 1-Minute Read ===== */}
       {leadText.length > 0 && synthesis != null && (
         <section className="mt-8">

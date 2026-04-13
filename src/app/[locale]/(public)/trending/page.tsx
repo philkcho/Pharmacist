@@ -69,33 +69,43 @@ function TrendCard({ trend }: { trend: TrendTopicRow & { headline?: string | nul
   return (
     <Link
       href={`/en/trending/${trend.slug}`}
-      className="group block rounded-lg border p-4 transition-colors hover:bg-muted/50"
+      className="group flex gap-4 overflow-hidden rounded-lg border p-4 transition-colors hover:bg-muted/50"
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1">
-          <h3 className="font-medium group-hover:text-blue-600 group-hover:underline">
-            {trend.headline ?? trend.queryText}
-          </h3>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              <TrendingUp className="mr-1 h-3 w-3" />
-              {trend.rankType === "rising" ? "Rising" : "Top"}
-              {trend.rankPosition != null ? ` #${trend.rankPosition}` : ""}
+      {/* Thumbnail */}
+      {trend.imageUrl && (
+        <div className="hidden h-20 w-32 shrink-0 overflow-hidden rounded-md bg-muted sm:block">
+          <img
+            src={trend.imageUrl}
+            alt={trend.headline ?? trend.queryText}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        </div>
+      )}
+
+      <div className="flex-1">
+        <h3 className="font-medium group-hover:text-blue-600 group-hover:underline">
+          {trend.headline ?? trend.queryText}
+        </h3>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            <TrendingUp className="mr-1 h-3 w-3" />
+            {trend.rankType === "rising" ? "Rising" : "Top"}
+            {trend.rankPosition != null ? ` #${trend.rankPosition}` : ""}
+          </Badge>
+          <span className="text-xs text-muted-foreground">
+            <Clock className="mr-1 inline h-3 w-3" />
+            Week of {trend.detectedWeek}
+          </span>
+          {!trend.pharmacistReviewed && (
+            <Badge
+              variant="outline"
+              className="border-amber-300 text-xs text-amber-700"
+            >
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              AI draft
             </Badge>
-            <span className="text-xs text-muted-foreground">
-              <Clock className="mr-1 inline h-3 w-3" />
-              Week of {trend.detectedWeek}
-            </span>
-            {!trend.pharmacistReviewed && (
-              <Badge
-                variant="outline"
-                className="border-amber-300 text-xs text-amber-700"
-              >
-                <AlertTriangle className="mr-1 h-3 w-3" />
-                AI draft
-              </Badge>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </Link>

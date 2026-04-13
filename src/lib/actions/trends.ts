@@ -28,6 +28,7 @@ import {
 import { fetchFaersTopReactions } from "@/lib/fda/faers-client";
 import { fetchActiveRecalls } from "@/lib/fda/enforcement-client";
 import { matchProducts } from "@/lib/ai/match-products";
+import { generateTrendImageUrl } from "@/lib/ai/generate-trend-image";
 import type {
   AnalysisResult,
   MarketReaction,
@@ -71,6 +72,7 @@ export interface TrendTopicRow {
   analysisError: string | null;
   publishedAt: string | null;
   slug: string | null;
+  imageUrl: string | null;
   pharmacistReviewed: boolean;
   reviewedAt: string | null;
   reviewedBy: string | null;
@@ -94,6 +96,7 @@ interface TrendTopicDbRow {
   analysis_error: string | null;
   published_at: string | null;
   slug: string | null;
+  image_url: string | null;
   pharmacist_reviewed: boolean;
   reviewed_at: string | null;
   reviewed_by: string | null;
@@ -118,6 +121,7 @@ function dbRowToTopic(row: TrendTopicDbRow): TrendTopicRow {
     analysisError: row.analysis_error,
     publishedAt: row.published_at,
     slug: row.slug,
+    imageUrl: row.image_url ?? null,
     pharmacistReviewed: row.pharmacist_reviewed,
     reviewedAt: row.reviewed_at,
     reviewedBy: row.reviewed_by,
@@ -565,6 +569,16 @@ export async function analyzeTrend(
     // 7. Update trend_topics based on synthesis outcome.
     if (synthesisResult.kind === "analysis") {
       const slug = generateSlug(trendRow.normalized_query, trendId);
+
+      // Generate cover image URL (Pollinations.ai — free, no API key)
+      // Also pre-warms the cache so image is ready when users visit.
+      const headline = synthesisResult.analysis?.headline ?? null;
+      const imageUrl = await generateTrendImageUrl(
+        trendRow.query_text,
+        trendRow.category,
+        headline
+      );
+
       const { error: updateError } = await admin
         .from("trend_topics")
         .update({
@@ -573,6 +587,7 @@ export async function analyzeTrend(
           analysis_error: null,
           published_at: now,
           slug,
+          image_url: imageUrl,
         })
         .eq("id", trendId);
       if (updateError) {

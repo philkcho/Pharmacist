@@ -25,6 +25,7 @@ import {
   TrendingUp,
   Store,
   ShieldCheck,
+  Play,
 } from "lucide-react";
 
 const menuItems = [
@@ -62,6 +63,11 @@ const menuItems = [
     title: "Approval Queue",
     href: "/approval-queue",
     icon: ShieldCheck,
+  },
+  {
+    title: "Dr.'s Analysis",
+    href: "/expert-picks",
+    icon: Play,
   },
   {
     title: "Retailers",

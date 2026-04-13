@@ -243,36 +243,6 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
           </section>
         )}
 
-        {/* ===== Where to Buy (inline) ===== */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <ShoppingCart className="h-5 w-5 text-primary" />
-            Where to Buy
-          </h2>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2">
-            {data.retailerSearchUrls.map((r) => (
-              <a
-                key={r.name}
-                href={r.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group flex items-center gap-3 rounded-lg border p-4 transition-all hover:border-primary/30 hover:shadow-md"
-              >
-                <span className="text-2xl">{r.emoji}</span>
-                <div className="flex-1">
-                  <h3 className="font-medium group-hover:text-primary">
-                    {r.name}
-                  </h3>
-                  <p className="text-xs text-muted-foreground">
-                    Search for {data.productName}
-                  </p>
-                </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground group-hover:text-primary" />
-              </a>
-            ))}
-          </div>
-        </section>
-
         {/* ===== Research & Sources ===== */}
         <section className="mt-8">
           <h2 className="flex items-center gap-2 text-xl font-semibold">

@@ -474,6 +474,9 @@ export const trendTopics = pgTable(
     publishedAt: timestamp("published_at", { withTimezone: true }),
     slug: text(),
 
+    // Auto-generated cover image (Pollinations.ai)
+    imageUrl: text("image_url"),
+
     // Post-publish pharmacist review overlay
     pharmacistReviewed: boolean("pharmacist_reviewed")
       .notNull()
@@ -749,3 +752,32 @@ export const productPurchaseLinksRelations = relations(
     }),
   })
 );
+
+// ─── Expert Picks ──────────────────────────────────────────────────
+export const expertPicks = pgTable("expert_picks", {
+  id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+  slug: text().unique().notNull(),
+  youtubeUrl: text("youtube_url").notNull(),
+  youtubeId: text("youtube_id").notNull(),
+  title: text().notNull(),
+  expertName: text("expert_name").notNull(),
+  expertCredential: text("expert_credential"),
+  thumbnailUrl: text("thumbnail_url"),
+  duration: text(),
+  category: text().notNull().default("health"),
+
+  transcript: text(),
+  summary: text(),
+  keyTakeaways: jsonb("key_takeaways").$type<string[]>(),
+  analysisSections: jsonb("analysis_sections").$type<
+    { title: string; content: string }[]
+  >(),
+  mentionedProducts: jsonb("mentioned_products").$type<
+    { name: string; slug?: string; reason: string }[]
+  >(),
+
+  status: text().notNull().default("draft"),
+  publishedAt: timestamp("published_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
+});

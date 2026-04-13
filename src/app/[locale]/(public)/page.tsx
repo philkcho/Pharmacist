@@ -7,12 +7,12 @@ import {
   Pill,
   Sparkles,
   Play,
-  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
+import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
 import { HomeSearchBar } from "@/components/home/home-search-bar";
 
 const healthTopics = [
@@ -35,38 +35,11 @@ const beautyTopics = [
   { slug: "vitamins", label: "Vitamins & Supplements", emoji: "🍊", productCount: 16 },
 ];
 
-const expertPicks = [
-  {
-    slug: "dermatologist-spf-guide",
-    title: "A Dermatologist's Honest SPF Tier List",
-    expert: "Dr. Shereene Idriss",
-    credential: "Board-Certified Dermatologist",
-    thumbnail: "/images/placeholder-video-1.jpg",
-    duration: "12:34",
-    category: "Skin Care" as const,
-  },
-  {
-    slug: "pharmacist-cold-medicine",
-    title: "Cold Medicines That Actually Work (and Ones That Don't)",
-    expert: "Dr. pharmacist",
-    credential: "PharmD, RPh",
-    thumbnail: "/images/placeholder-video-2.jpg",
-    duration: "8:21",
-    category: "Health" as const,
-  },
-  {
-    slug: "vitamin-supplements-worth-it",
-    title: "Stop Wasting Money on These Supplements",
-    expert: "Dr. Andrea Suarez",
-    credential: "Board-Certified Dermatologist",
-    thumbnail: "/images/placeholder-video-3.jpg",
-    duration: "15:07",
-    category: "Wellness" as const,
-  },
-];
-
 export default async function Home() {
-  const trends = await listPublishedTrendsWithHeadline(3);
+  const [trends, expertPicks] = await Promise.all([
+    listPublishedTrendsWithHeadline(3),
+    listPublishedExpertPicks(3),
+  ]);
 
   return (
     <div className="flex flex-col">
@@ -150,53 +123,84 @@ export default async function Home() {
             </Button>
           </div>
 
-          <div className="mt-6 grid gap-4 sm:grid-cols-3">
-            {expertPicks.map((pick) => (
-              <Link
-                key={pick.slug}
-                href={`/expert/${pick.slug}`}
-                className="group overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md"
-              >
-                {/* Thumbnail */}
-                <div className="relative aspect-video bg-muted">
-                  <div className="flex h-full items-center justify-center">
-                    <div className="rounded-full bg-black/60 p-3 transition-transform group-hover:scale-110">
-                      <Play className="h-6 w-6 fill-white text-white" />
-                    </div>
-                  </div>
-                  <span className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
-                    {pick.duration}
-                  </span>
-                  <Badge
-                    variant="secondary"
-                    className="absolute left-2 top-2 text-xs"
+          {expertPicks.length > 0 ? (
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              {expertPicks.map((pick) => {
+                const categoryLabel =
+                  pick.category === "health"
+                    ? "Health"
+                    : pick.category === "skin-care"
+                      ? "Skin Care"
+                      : "Wellness";
+                return (
+                  <Link
+                    key={pick.slug}
+                    href={`/expert/${pick.slug}`}
+                    className="group overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md"
                   >
-                    {pick.category}
-                  </Badge>
-                </div>
-                {/* Info */}
-                <div className="p-4">
-                  <h3 className="line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">
-                    {pick.title}
-                  </h3>
-                  <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-                    1-min summary + ingredient analysis + where to buy
-                  </p>
-                  <div className="mt-2 flex items-center gap-1.5">
-                    <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
-                      Rx
+                    {/* Thumbnail */}
+                    <div className="relative aspect-video bg-muted">
+                      {pick.thumbnailUrl ? (
+                        <img
+                          src={pick.thumbnailUrl}
+                          alt={pick.title}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <Play className="h-10 w-10 text-muted-foreground/50" />
+                        </div>
+                      )}
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10">
+                        <div className="rounded-full bg-black/60 p-3 transition-transform group-hover:scale-110">
+                          <Play className="h-6 w-6 fill-white text-white" />
+                        </div>
+                      </div>
+                      {pick.duration && (
+                        <span className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
+                          {pick.duration}
+                        </span>
+                      )}
+                      <Badge
+                        variant="secondary"
+                        className="absolute left-2 top-2 text-xs"
+                      >
+                        {categoryLabel}
+                      </Badge>
                     </div>
-                    <div>
-                      <p className="text-xs font-medium">{pick.expert}</p>
-                      <p className="text-[11px] text-muted-foreground">
-                        {pick.credential}
+                    {/* Info */}
+                    <div className="p-4">
+                      <h3 className="line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">
+                        {pick.title}
+                      </h3>
+                      <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
+                        1-min summary + ingredient analysis + where to buy
                       </p>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                          Rx
+                        </div>
+                        <div>
+                          <p className="text-xs font-medium">{pick.expertName}</p>
+                          <p className="text-[11px] text-muted-foreground">
+                            {pick.expertCredential}
+                          </p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+              <Play className="mx-auto h-8 w-8 opacity-50" />
+              <p className="mt-2">Expert analyses coming soon.</p>
+              <p className="text-sm">
+                Pharmacist-reviewed video breakdowns are being curated.
+              </p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -271,39 +275,53 @@ function TrendCard({ trend }: { trend: TrendTopicRow & { headline?: string | nul
   return (
     <Link
       href={`/trending/${trend.slug}`}
-      className="group block rounded-lg border p-5 transition-all hover:border-primary/30 hover:shadow-md"
+      className="group block overflow-hidden rounded-lg border transition-all hover:border-primary/30 hover:shadow-md"
     >
-      <div className="flex items-center gap-2">
-        <Badge variant="outline" className="text-xs">
-          <TrendingUp className="mr-1 h-3 w-3" />
-          {trend.rankType === "rising" ? "Rising" : "Top"}
-        </Badge>
-        <Badge
-          variant="secondary"
-          className="text-xs"
-        >
-          {trend.category === "health" ? "Health" : "Beauty"}
-        </Badge>
-        {!trend.pharmacistReviewed && (
-          <Badge
-            variant="outline"
-            className="border-amber-300 text-xs text-amber-700"
-          >
-            <AlertTriangle className="mr-1 h-3 w-3" />
-            AI
+      {/* Cover image */}
+      {trend.imageUrl && (
+        <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+          <img
+            src={trend.imageUrl}
+            alt={trend.headline ?? trend.queryText}
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            loading="lazy"
+          />
+        </div>
+      )}
+
+      <div className="p-5">
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="text-xs">
+            <TrendingUp className="mr-1 h-3 w-3" />
+            {trend.rankType === "rising" ? "Rising" : "Top"}
           </Badge>
-        )}
-      </div>
+          <Badge
+            variant="secondary"
+            className="text-xs"
+          >
+            {trend.category === "health" ? "Health" : "Beauty"}
+          </Badge>
+          {!trend.pharmacistReviewed && (
+            <Badge
+              variant="outline"
+              className="border-amber-300 text-xs text-amber-700"
+            >
+              <AlertTriangle className="mr-1 h-3 w-3" />
+              AI
+            </Badge>
+          )}
+        </div>
 
-      <h3 className="mt-3 font-semibold leading-snug group-hover:text-primary">
-        {trend.headline ?? trend.queryText}
-      </h3>
+        <h3 className="mt-3 font-semibold leading-snug group-hover:text-primary">
+          {trend.headline ?? trend.queryText}
+        </h3>
 
-      <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
-        <Clock className="h-3 w-3" />
-        <span>~1 min read</span>
-        <span>·</span>
-        <span>Week of {trend.detectedWeek}</span>
+        <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground">
+          <Clock className="h-3 w-3" />
+          <span>~1 min read</span>
+          <span>·</span>
+          <span>Week of {trend.detectedWeek}</span>
+        </div>
       </div>
     </Link>
   );
