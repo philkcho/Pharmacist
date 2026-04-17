@@ -30,12 +30,12 @@ export const metadata: Metadata = {
     "worth the hype",
     "FDA reviewed",
   ],
-  alternates: { canonical: `${SITE_URL}/en` },
+  alternates: { canonical: `${SITE_URL}/` },
   openGraph: {
     title: "Dr.pharmacist — Pharmacist-Reviewed Health & Beauty Analysis",
     description:
       "Real pharmacist analysis of trending products. FDA data + PubMed research + ingredient science. Find out what's worth the hype.",
-    url: `${SITE_URL}/en`,
+    url: `${SITE_URL}/`,
     type: "website",
     siteName: "Dr.pharmacist",
     locale: "en_US",

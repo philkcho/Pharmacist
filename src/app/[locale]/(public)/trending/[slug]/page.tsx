@@ -55,7 +55,7 @@ export async function generateMetadata({
     : data.topic.queryText;
 
   const title = synthesis?.headline ?? `${data.topic.queryText} — Trending in ${data.topic.category === "health" ? "Health" : "Beauty"}`;
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/trending/${slug}`;
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/trending/${slug}`;
 
   return {
     title,
@@ -157,7 +157,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
     ...productTypeKeywords.filter((k) => leadLower.includes(k.toLowerCase())),
   ].filter((k) => k.length >= 3);
 
-  const articleUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/trending/${slug}`;
+  const articleUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/trending/${slug}`;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
@@ -171,8 +171,8 @@ export default async function TrendPage({ params }: TrendPageProps) {
       />
       <BreadcrumbListJsonLd
         items={[
-          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
-          { name: "Worth the Hype", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/trending` },
+          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/` },
+          { name: "Worth the Hype", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/trending` },
           { name: synthesis?.headline ?? topic.queryText, url: articleUrl },
         ]}
       />

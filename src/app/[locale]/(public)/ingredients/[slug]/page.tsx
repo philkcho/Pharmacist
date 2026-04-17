@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = `${data.name} — What It Is, Benefits & Uses | Dr.pharmacist`;
   const description = data.article.hook.slice(0, 160);
-  const url = `${SITE_URL}/en/ingredients/${slug}`;
+  const url = `${SITE_URL}/ingredients/${slug}`;
 
   return {
     title,
@@ -60,7 +60,7 @@ export default async function IngredientGuidePage({ params }: Props) {
   if (!data) notFound();
 
   const { name, article, foundInProducts } = data;
-  const url = `${SITE_URL}/en/ingredients/${slug}`;
+  const url = `${SITE_URL}/ingredients/${slug}`;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
@@ -73,8 +73,8 @@ export default async function IngredientGuidePage({ params }: Props) {
       />
       <BreadcrumbListJsonLd
         items={[
-          { name: "Home", url: `${SITE_URL}/en` },
-          { name: "Ingredients", url: `${SITE_URL}/en` },
+          { name: "Home", url: `${SITE_URL}/` },
+          { name: "Ingredients", url: `${SITE_URL}/` },
           { name, url },
         ]}
       />

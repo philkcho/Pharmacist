@@ -29,7 +29,7 @@ export async function generateMetadata({
 
   const title = pick.title;
   const description = pick.summary?.slice(0, 160) ?? "";
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/expert/${slug}`;
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/expert/${slug}`;
 
   return {
     title,
@@ -74,7 +74,7 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
     )
   );
 
-  const expertUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/expert/${slug}`;
+  const expertUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/expert/${slug}`;
 
   return (
     <article className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
@@ -87,8 +87,8 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
       />
       <BreadcrumbListJsonLd
         items={[
-          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
-          { name: "Dr.'s Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/expert` },
+          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/` },
+          { name: "Dr.'s Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/expert` },
           { name: pick.title, url: expertUrl },
         ]}
       />

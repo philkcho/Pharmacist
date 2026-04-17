@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const title = `Is ${data.product.name} Safe? — Pharmacist Review`;
   const description = data.article.hookAnswer.slice(0, 160);
-  const url = `${SITE_URL}/en/is-safe/${slug}`;
+  const url = `${SITE_URL}/is-safe/${slug}`;
 
   return {
     title,
@@ -63,7 +63,7 @@ export default async function IsSafePage({ params }: Props) {
   if (!data) notFound();
 
   const { product, article } = data;
-  const url = `${SITE_URL}/en/is-safe/${slug}`;
+  const url = `${SITE_URL}/is-safe/${slug}`;
 
   // Hook tone: look for Yes/No/Generally/Depends to pick an accent
   const firstWord = article.hookAnswer.trim().split(/\s+/)[0].toLowerCase();
@@ -86,10 +86,10 @@ export default async function IsSafePage({ params }: Props) {
       />
       <BreadcrumbListJsonLd
         items={[
-          { name: "Home", url: `${SITE_URL}/en` },
+          { name: "Home", url: `${SITE_URL}/` },
           {
             name: "Product Analysis",
-            url: `${SITE_URL}/en/analysis/${product.slug}`,
+            url: `${SITE_URL}/analysis/${product.slug}`,
           },
           { name: `Is ${product.name} Safe?`, url },
         ]}

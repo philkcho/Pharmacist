@@ -35,7 +35,7 @@ export async function generateMetadata({
   const description = data.verdict
     ? `${data.verdict.slice(0, 140)}...`
     : `Detailed ingredient analysis, pros & cons, safety information for ${data.productName}.`;
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/analysis/${slug}`;
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/analysis/${slug}`;
 
   return {
     title,
@@ -68,7 +68,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
     quasi_drug: "Quasi-drug",
   };
 
-  const analysisUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/analysis/${slug}`;
+  const analysisUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/analysis/${slug}`;
 
   return (
     <>
@@ -82,8 +82,8 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
       />
       <BreadcrumbListJsonLd
         items={[
-          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
-          { name: "Product Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
+          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/` },
+          { name: "Product Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/` },
           { name: data.productName, url: analysisUrl },
         ]}
       />

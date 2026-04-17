@@ -43,9 +43,13 @@ const [
 
 const [lastSafety, lastCmp, lastIng] = await Promise.all([
   supabase.from("medications").select("name, safety_article_generated_at").not("safety_article_generated_at", "is", null).order("safety_article_generated_at", { ascending: false }).limit(3),
-  supabase.from("product_comparisons").select("slug_a, slug_b, created_at").order("created_at", { ascending: false }).limit(3),
-  supabase.from("ingredient_guides").select("slug, created_at").order("created_at", { ascending: false }).limit(3),
+  supabase.from("product_comparisons").select("slug_a, slug_b, generated_at").order("generated_at", { ascending: false }).limit(3),
+  supabase.from("ingredient_guides").select("slug, generated_at").order("generated_at", { ascending: false }).limit(3),
 ]);
+
+for (const [label, res] of [["safety", lastSafety], ["comparisons", lastCmp], ["ingredients", lastIng]]) {
+  if (res.error) console.error(`[WARN] ${label} query error:`, res.error.message);
+}
 
 console.log("== Products ==");
 console.log(`  total:                    ${totalProducts}`);
@@ -66,6 +70,6 @@ console.log("== Recent SEO Generation ==");
 console.log("  Last 3 safety articles:");
 (lastSafety.data ?? []).forEach((r) => console.log(`    ${r.safety_article_generated_at}  ${r.name}`));
 console.log("  Last 3 comparisons:");
-(lastCmp.data ?? []).forEach((r) => console.log(`    ${r.created_at}  ${r.slug_a} vs ${r.slug_b}`));
+(lastCmp.data ?? []).forEach((r) => console.log(`    ${r.generated_at}  ${r.slug_a} vs ${r.slug_b}`));
 console.log("  Last 3 ingredient guides:");
-(lastIng.data ?? []).forEach((r) => console.log(`    ${r.created_at}  ${r.slug}`));
+(lastIng.data ?? []).forEach((r) => console.log(`    ${r.generated_at}  ${r.slug}`));
