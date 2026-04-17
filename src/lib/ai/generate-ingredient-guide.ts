@@ -22,73 +22,34 @@ import { z } from "zod";
 // ── Zod Schema ──────────────────────────────────────────────
 
 const IngredientGuideSchema = z.object({
-  hook: z
-    .string()
-    .describe(
-      "One-paragraph plain-English definition of what this ingredient is and why people use it. 2-3 sentences."
-    ),
-  whatItIs: z
-    .string()
-    .describe("2-4 sentence explanation of the ingredient's chemistry/origin."),
+  hook: z.string(),
+  whatItIs: z.string(),
   keyBenefits: z
     .array(
       z.object({
-        benefit: z.string().describe("Short benefit label (4-8 words)."),
-        explanation: z
-          .string()
-          .describe(
-            "Plain-language explanation including evidence strength (e.g. 'well-studied', 'limited data')."
-          ),
+        benefit: z.string(),
+        explanation: z.string(),
       })
     )
-    .min(3)
-    .max(6),
-  howItWorks: z
-    .string()
-    .describe("Mechanism of action, 2-4 sentences. Approachable but accurate."),
-  recommendedConcentration: z
-    .string()
-    .optional()
-    .describe(
-      "Typical effective concentration or dose range (e.g. '2-10% for skincare', '500-1000mg daily')."
-    ),
-  whoShouldUse: z
-    .array(z.string())
     .min(2)
-    .max(5)
-    .describe("Who benefits most from this ingredient."),
-  whoShouldAvoid: z
-    .array(z.string())
-    .min(1)
-    .max(4)
-    .describe("Who should avoid or consult a doctor first."),
-  sideEffects: z
-    .array(z.string())
-    .min(1)
-    .max(5)
-    .describe("Common side effects or irritation patterns."),
-  worksWellWith: z
-    .array(z.string())
-    .min(1)
-    .max(5)
-    .describe("Compatible ingredients/actives (synergy)."),
-  avoidCombiningWith: z
-    .array(z.string())
-    .min(1)
-    .max(4)
-    .describe("Ingredients that reduce effectiveness or cause irritation when combined."),
+    .max(8),
+  howItWorks: z.string(),
+  recommendedConcentration: z.string().optional(),
+  whoShouldUse: z.array(z.string()).min(1).max(6),
+  whoShouldAvoid: z.array(z.string()).min(1).max(6),
+  sideEffects: z.array(z.string()).min(1).max(6),
+  worksWellWith: z.array(z.string()).min(1).max(6),
+  avoidCombiningWith: z.array(z.string()).min(1).max(6),
   faq: z
     .array(
       z.object({
-        question: z.string().describe("Natural long-tail query."),
-        answer: z.string().describe("2-3 sentence direct answer."),
+        question: z.string(),
+        answer: z.string(),
       })
     )
-    .min(3)
-    .max(6),
-  bottomLine: z
-    .string()
-    .describe("2-3 sentence practical takeaway — is this ingredient worth it?"),
+    .min(2)
+    .max(8),
+  bottomLine: z.string(),
 });
 
 export type IngredientGuide = z.infer<typeof IngredientGuideSchema>;

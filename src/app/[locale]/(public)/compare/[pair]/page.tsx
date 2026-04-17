@@ -269,18 +269,19 @@ function WinnerBadge({
   productA,
   productB,
 }: {
-  winner: "A" | "B" | "Tie";
+  winner: string;
   productA: string;
   productB: string;
 }) {
-  if (winner === "Tie") {
+  const normalized = winner.trim().toLowerCase();
+  if (normalized === "tie" || normalized.includes("both")) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-semibold">
         <Minus className="h-3 w-3" /> Tie
       </span>
     );
   }
-  const name = winner === "A" ? productA : productB;
+  const name = normalized === "a" ? productA : productB;
   return (
     <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary">
       <Trophy className="h-3 w-3" /> {name}

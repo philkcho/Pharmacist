@@ -27,46 +27,35 @@ const ComparisonSchema = z.object({
     .describe(
       "One-paragraph answer to 'Which is better, A or B?'. Must pick a side OR explicitly say 'it depends on X'. 2-3 sentences."
     ),
-  quickVerdict: z
-    .object({
-      winnerByUse: z
-        .array(
-          z.object({
-            useCase: z
-              .string()
-              .describe("Short use case label, e.g. 'Sensitive skin', 'Budget pick'"),
-            winner: z
-              .enum(["A", "B", "Tie"])
-              .describe("Which product wins for this use case."),
-            why: z
-              .string()
-              .describe("One sentence why this product wins."),
-          })
-        )
-        .min(3)
-        .max(5),
-    })
-    .describe(
-      "3-5 use cases, each with a clear winner (A, B, or Tie). These drive featured snippets."
-    ),
+  quickVerdict: z.object({
+    winnerByUse: z
+      .array(
+        z.object({
+          useCase: z.string(),
+          winner: z
+            .string()
+            .describe("Must be exactly one of: A, B, or Tie"),
+          why: z.string(),
+        })
+      )
+      .min(2)
+      .max(6),
+  }),
   sideBySide: z
     .array(
       z.object({
-        dimension: z
-          .string()
-          .describe("Comparison axis, e.g. 'Active ingredients', 'Price', 'Skin type'"),
-        productA: z.string().describe("What product A offers for this dimension."),
-        productB: z.string().describe("What product B offers for this dimension."),
+        dimension: z.string(),
+        productA: z.string(),
+        productB: z.string(),
       })
     )
-    .min(4)
-    .max(7)
-    .describe("Structured side-by-side comparison across key dimensions."),
+    .min(3)
+    .max(8),
   prosCons: z.object({
-    productAPros: z.array(z.string()).min(2).max(4),
-    productACons: z.array(z.string()).min(1).max(3),
-    productBPros: z.array(z.string()).min(2).max(4),
-    productBCons: z.array(z.string()).min(1).max(3),
+    productAPros: z.array(z.string()).min(1).max(5),
+    productACons: z.array(z.string()).min(1).max(4),
+    productBPros: z.array(z.string()).min(1).max(5),
+    productBCons: z.array(z.string()).min(1).max(4),
   }),
   bottomLine: z
     .string()
