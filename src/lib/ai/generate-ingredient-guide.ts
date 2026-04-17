@@ -31,15 +31,15 @@ const IngredientGuideSchema = z.object({
         explanation: z.string(),
       })
     )
-    .min(2)
+    .min(1)
     .max(8),
   howItWorks: z.string(),
   recommendedConcentration: z.string().optional(),
   whoShouldUse: z.array(z.string()).min(1).max(6),
-  whoShouldAvoid: z.array(z.string()).min(1).max(6),
-  sideEffects: z.array(z.string()).min(1).max(6),
-  worksWellWith: z.array(z.string()).min(1).max(6),
-  avoidCombiningWith: z.array(z.string()).min(1).max(6),
+  whoShouldAvoid: z.array(z.string()).max(6),
+  sideEffects: z.array(z.string()).max(6),
+  worksWellWith: z.array(z.string()).max(6),
+  avoidCombiningWith: z.array(z.string()).max(6),
   faq: z
     .array(
       z.object({
@@ -86,12 +86,32 @@ Write a "What is ${input.name}?" guide. Rules:
 
 Generate all fields. Omit recommendedConcentration only if it genuinely doesn't apply.`;
 
-  const { object } = await generateObject({
-    model: google("gemini-2.5-flash"),
-    schema: IngredientGuideSchema,
-    prompt,
-    temperature: 0.4,
-  });
+  try {
+    const { object } = await generateObject({
+      model: google("gemini-2.5-flash"),
+      schema: IngredientGuideSchema,
+      prompt,
+      temperature: 0.4,
+    });
+    return object;
+  } catch (err) {
+    const detail = summarizeAiError(err);
+    console.error(
+      `[ingredient-guide] FAILED ${input.name}: ${detail}`,
+    );
+    throw err;
+  }
+}
 
-  return object;
+function summarizeAiError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const parts: string[] = [err.message];
+  const anyErr = err as Error & { cause?: unknown; text?: string };
+  if (anyErr.cause instanceof Error) {
+    parts.push(`cause=${anyErr.cause.message}`);
+  }
+  if (typeof anyErr.text === "string") {
+    parts.push(`text=${anyErr.text.slice(0, 400)}`);
+  }
+  return parts.join(" | ");
 }

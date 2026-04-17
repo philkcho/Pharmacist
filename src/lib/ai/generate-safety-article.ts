@@ -31,14 +31,14 @@ const SafetyArticleSchema = z.object({
     ),
   whoShouldAvoid: z
     .array(z.string())
-    .min(2)
+    .min(1)
     .max(6)
     .describe(
       "Specific groups who should avoid or consult a doctor first. E.g. 'Pregnant or breastfeeding women', 'People on blood thinners'."
     ),
   commonSideEffects: z
     .array(z.string())
-    .min(2)
+    .min(1)
     .max(6)
     .describe(
       "Common side effects in plain language. Include rough frequency when known (e.g. 'Drowsiness — reported in ~1 in 10 users')."
@@ -132,12 +132,32 @@ Write a "Is ${input.productName} Safe?" Q&A article. Rules:
 
 Generate all fields of the structured output.`;
 
-  const { object } = await generateObject({
-    model: google("gemini-2.5-flash"),
-    schema: SafetyArticleSchema,
-    prompt,
-    temperature: 0.4,
-  });
+  try {
+    const { object } = await generateObject({
+      model: google("gemini-2.5-flash"),
+      schema: SafetyArticleSchema,
+      prompt,
+      temperature: 0.4,
+    });
+    return object;
+  } catch (err) {
+    const detail = summarizeAiError(err);
+    console.error(
+      `[safety-article] FAILED ${input.productName} (${input.productType}): ${detail}`,
+    );
+    throw err;
+  }
+}
 
-  return object;
+function summarizeAiError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const parts: string[] = [err.message];
+  const anyErr = err as Error & { cause?: unknown; text?: string };
+  if (anyErr.cause instanceof Error) {
+    parts.push(`cause=${anyErr.cause.message}`);
+  }
+  if (typeof anyErr.text === "string") {
+    parts.push(`text=${anyErr.text.slice(0, 400)}`);
+  }
+  return parts.join(" | ");
 }

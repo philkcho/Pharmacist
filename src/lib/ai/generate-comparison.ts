@@ -38,7 +38,7 @@ const ComparisonSchema = z.object({
           why: z.string(),
         })
       )
-      .min(2)
+      .min(1)
       .max(6),
   }),
   sideBySide: z
@@ -49,13 +49,13 @@ const ComparisonSchema = z.object({
         productB: z.string(),
       })
     )
-    .min(3)
+    .min(2)
     .max(8),
   prosCons: z.object({
     productAPros: z.array(z.string()).min(1).max(5),
-    productACons: z.array(z.string()).min(1).max(4),
+    productACons: z.array(z.string()).max(4),
     productBPros: z.array(z.string()).min(1).max(5),
-    productBCons: z.array(z.string()).min(1).max(4),
+    productBCons: z.array(z.string()).max(4),
   }),
   bottomLine: z
     .string()
@@ -118,12 +118,32 @@ Write a "${input.productA.name} vs ${input.productB.name}" comparison. Rules:
 
 Generate all fields of the structured output.`;
 
-  const { object } = await generateObject({
-    model: google("gemini-2.5-flash"),
-    schema: ComparisonSchema,
-    prompt,
-    temperature: 0.4,
-  });
+  try {
+    const { object } = await generateObject({
+      model: google("gemini-2.5-flash"),
+      schema: ComparisonSchema,
+      prompt,
+      temperature: 0.4,
+    });
+    return object;
+  } catch (err) {
+    const detail = summarizeAiError(err);
+    console.error(
+      `[comparison] FAILED ${input.productA.slug}-vs-${input.productB.slug}: ${detail}`,
+    );
+    throw err;
+  }
+}
 
-  return object;
+function summarizeAiError(err: unknown): string {
+  if (!(err instanceof Error)) return String(err);
+  const parts: string[] = [err.message];
+  const anyErr = err as Error & { cause?: unknown; text?: string };
+  if (anyErr.cause instanceof Error) {
+    parts.push(`cause=${anyErr.cause.message}`);
+  }
+  if (typeof anyErr.text === "string") {
+    parts.push(`text=${anyErr.text.slice(0, 400)}`);
+  }
+  return parts.join(" | ");
 }
