@@ -767,8 +767,12 @@ export const expertPicks = pgTable("expert_picks", {
   category: text().notNull().default("health"),
 
   transcript: text(),
+  cleanTranscript: text("clean_transcript"),
   summary: text(),
   keyTakeaways: jsonb("key_takeaways").$type<string[]>(),
+  properNotes: jsonb("proper_notes").$type<
+    { heading: string; bullets: string[] }[]
+  >(),
   analysisSections: jsonb("analysis_sections").$type<
     { title: string; content: string }[]
   >(),
@@ -781,3 +785,30 @@ export const expertPicks = pgTable("expert_picks", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
+
+// ─── Page Views (Analytics) ───────────────────────────────────────
+export const pageViews = pgTable(
+  "page_views",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    visitorId: text("visitor_id").notNull(),
+    sessionId: text("session_id"),
+    path: text().notNull(),
+    referrer: text(),
+    userAgent: text("user_agent"),
+    ip: text(),
+    country: text(),
+    region: text(),
+    city: text(),
+    durationSeconds: integer("duration_seconds"),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_page_views_created").on(table.createdAt),
+    index("idx_page_views_path").on(table.path, table.createdAt),
+    index("idx_page_views_country").on(table.country, table.createdAt),
+    index("idx_page_views_visitor").on(table.visitorId, table.createdAt),
+  ]
+);

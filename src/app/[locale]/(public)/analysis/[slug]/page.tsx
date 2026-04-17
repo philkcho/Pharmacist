@@ -20,6 +20,7 @@ import Link from "next/link";
 import { getProductAnalysis, type IngredientDetail } from "@/lib/actions/analysis";
 import { StickyBuyBar } from "./sticky-buy-bar";
 import type { Metadata } from "next";
+import { ProductReviewJsonLd } from "@/components/seo/json-ld";
 
 interface AnalysisPageProps {
   params: Promise<{ slug: string; locale: string }>;
@@ -30,9 +31,29 @@ export async function generateMetadata({
 }: AnalysisPageProps): Promise<Metadata> {
   const { slug } = await params;
   const data = await getProductAnalysis(slug);
+  const title = `${data.productName} — Analysis`;
+  const description = data.verdict
+    ? `${data.verdict.slice(0, 140)}...`
+    : `Detailed ingredient analysis, pros & cons, safety information for ${data.productName}.`;
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/analysis/${slug}`;
+
   return {
-    title: `${data.productName} — Analysis — Dr.pharmacist`,
-    description: `Detailed ingredient analysis, pros & cons, safety information for ${data.productName}.`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: `${data.productName} — Pharmacist Analysis`,
+      description,
+      url,
+      type: "article",
+      ...(data.imageUrl ? { images: [{ url: data.imageUrl, width: 600, height: 600 }] } : {}),
+    },
+    twitter: {
+      card: "summary",
+      title: `${data.productName} — Analysis`,
+      description,
+      ...(data.imageUrl ? { images: [data.imageUrl] } : {}),
+    },
   };
 }
 
@@ -47,8 +68,18 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
     quasi_drug: "Quasi-drug",
   };
 
+  const analysisUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/analysis/${slug}`;
+
   return (
     <>
+      <ProductReviewJsonLd
+        productName={data.productName}
+        description={data.verdict ?? `Analysis of ${data.productName}`}
+        url={analysisUrl}
+        imageUrl={data.imageUrl}
+        pros={data.pros}
+        cons={data.cons}
+      />
       <div className="mx-auto max-w-3xl px-4 pb-24 pt-8 sm:px-6">
         {/* Product Header */}
         <div className="flex items-start gap-5">
@@ -74,7 +105,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
                 )}
               </div>
               {/* Buy button — shows the referrer retailer */}
-              {data.purchaseOptions.length > 0 ? (
+              {data.purchaseOptions.length > 0 && (
                 <a
                   href={`/api/click/${data.purchaseOptions[0].linkId}?ref=analysis_page`}
                   target="_blank"
@@ -86,19 +117,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
                     <ExternalLink className="ml-1 h-3 w-3" />
                   </Button>
                 </a>
-              ) : data.retailerSearchUrls.length > 0 ? (
-                <a
-                  href={data.retailerSearchUrls[0].url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <Button size="sm">
-                    <ShoppingCart className="mr-1.5 h-4 w-4" />
-                    Buy on {data.retailerSearchUrls[0].name}
-                    <ExternalLink className="ml-1 h-3 w-3" />
-                  </Button>
-                </a>
-              ) : null}
+              )}
             </div>
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {data.productType !== "unknown" && (
@@ -274,22 +293,13 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
           </div>
         </section>
 
-        {/* Disclaimer */}
-        <div className="mt-8 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950 dark:text-yellow-200">
-          <p className="font-medium">Medical Disclaimer</p>
-          <p className="mt-1">
-            This analysis is for educational purposes only. Always consult your
-            pharmacist or healthcare provider before use. Dr.pharmacist may earn
-            a commission from purchases.
-          </p>
-        </div>
       </div>
 
-      {/* Sticky buy bar — follows scroll, shows referrer retailer */}
-      {(data.purchaseOptions.length > 0 || data.retailerSearchUrls.length > 0) && (
+      {/* Sticky buy bar — only when purchase links exist in DB */}
+      {data.purchaseOptions.length > 0 && (
         <StickyBuyBar
           productName={data.productName}
-          retailers={data.retailerSearchUrls.slice(0, 1)}
+          retailers={[]}
           purchaseOptions={data.purchaseOptions.slice(0, 1)}
         />
       )}

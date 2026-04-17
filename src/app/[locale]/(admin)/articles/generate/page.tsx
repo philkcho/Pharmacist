@@ -185,7 +185,7 @@ export default function GenerateArticlePage() {
             (editedContent ?? completion).slice(0, 160).replace(/[#*\n]/g, "").trim(),
           status,
           is_ai_drafted: true,
-          ai_model: "gemini-2.5-flash",
+          ai_model: "gemini-2.5-pro",
           references,
           product_cards: productCards,
         }),

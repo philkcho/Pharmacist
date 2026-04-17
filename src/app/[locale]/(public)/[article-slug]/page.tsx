@@ -231,20 +231,6 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         </section>
       )}
 
-      <div className="mt-12 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950 dark:text-yellow-200">
-        <p className="font-medium">Medical Disclaimer</p>
-        <p className="mt-1">
-          The information in this article is for educational purposes only and is
-          not a substitute for professional medical advice. Always consult your
-          healthcare provider or pharmacist before starting any new medication.
-        </p>
-        {article.is_ai_drafted && (
-          <p className="mt-2 text-xs">
-            This article was drafted with AI assistance and reviewed by a
-            licensed pharmacist.
-          </p>
-        )}
-      </div>
     </article>
   );
 }

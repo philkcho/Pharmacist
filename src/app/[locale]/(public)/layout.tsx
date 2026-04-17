@@ -1,20 +1,19 @@
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
-import { ChatSidebar } from "@/components/chat/chat-sidebar";
+import { isPharmacist } from "@/lib/actions/auth";
 
-export default function PublicLayout({
+export default async function PublicLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const showAdmin = await isPharmacist();
+
   return (
     <>
-      <Header />
-      <div className="mx-auto flex w-full max-w-[1400px] flex-1 gap-6 px-4 lg:px-6">
-        {/* Chat sidebar — left, desktop only */}
-        <ChatSidebar />
-        {/* Main content */}
-        <main className="min-w-0 flex-1">{children}</main>
+      <Header showAdmin={showAdmin} />
+      <div className="mx-auto w-full max-w-[1400px] flex-1 px-4 lg:px-6">
+        <main className="min-w-0">{children}</main>
       </div>
       <Footer />
     </>

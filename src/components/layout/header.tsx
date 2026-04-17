@@ -3,7 +3,11 @@ import { useTranslations } from "next-intl";
 import { Pill } from "lucide-react";
 import { HeaderSearchBar } from "./header-search-bar";
 
-export function Header() {
+interface HeaderProps {
+  showAdmin?: boolean;
+}
+
+export function Header({ showAdmin }: HeaderProps) {
   const t = useTranslations();
 
   return (
@@ -22,12 +26,14 @@ export function Header() {
         </div>
 
         <nav className="flex shrink-0 items-center gap-4 text-sm font-medium">
-          <Link
-            href="/trending"
-            className="text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Trending
-          </Link>
+          {showAdmin && (
+            <Link
+              href="/dashboard"
+              className="text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Admin
+            </Link>
+          )}
           <Link
             href="/about"
             className="text-muted-foreground transition-colors hover:text-foreground"

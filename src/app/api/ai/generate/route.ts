@@ -76,7 +76,7 @@ export async function POST(req: Request) {
   }
 
   const result = streamText({
-    model: google("gemini-2.5-flash"),
+    model: google("gemini-2.5-pro"),
     maxRetries: 0,
     system: `You are a licensed pharmacist (PharmD) writing expert OTC medication recommendation articles for a health information website called "Dr.pharmacist."
 

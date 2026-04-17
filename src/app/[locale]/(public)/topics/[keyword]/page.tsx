@@ -17,10 +17,12 @@ import {
   type RetailerSection,
   type RetailerProduct,
 } from "@/lib/actions/topics";
+import { ProductImage } from "@/components/ui/product-image";
 import type { Metadata } from "next";
 
 interface TopicPageProps {
   params: Promise<{ keyword: string; locale: string }>;
+  searchParams: Promise<{ from?: string }>;
 }
 
 export async function generateMetadata({
@@ -35,9 +37,13 @@ export async function generateMetadata({
   };
 }
 
-export default async function TopicPage({ params }: TopicPageProps) {
+export default async function TopicPage({
+  params,
+  searchParams,
+}: TopicPageProps) {
   const { keyword } = await params;
-  const data = await getTopicByKeyword(keyword);
+  const { from } = await searchParams;
+  const data = await getTopicByKeyword(keyword, from);
 
   // Collect all product names across retailers for "select product" analysis
   const allRetailerProducts = data.retailerSections.flatMap((s) =>
@@ -130,15 +136,6 @@ export default async function TopicPage({ params }: TopicPageProps) {
         </section>
       )}
 
-      {/* Disclaimer */}
-      <div className="mt-10 rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950 dark:text-yellow-200">
-        <p className="font-medium">Disclaimer</p>
-        <p className="mt-1">
-          Product information is for educational purposes only. Always consult
-          your pharmacist before use. Dr.pharmacist may earn a commission from
-          purchases.
-        </p>
-      </div>
     </div>
   );
 }
@@ -192,15 +189,14 @@ function RetailerProductCard({ product }: { product: RetailerProduct }) {
         rel="noopener noreferrer"
         className="group flex h-36 items-center justify-center bg-white p-2"
       >
-        {product.imageUrl ? (
-          <img
-            src={product.imageUrl}
-            alt={product.name}
-            className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
-          />
-        ) : (
-          <Pill className="h-10 w-10 text-muted-foreground/20" />
-        )}
+        <ProductImage
+          src={product.imageUrl}
+          alt={product.name}
+          productName={product.name}
+          className="max-h-full max-w-full object-contain transition-transform group-hover:scale-105"
+          fallbackClassName="flex h-full w-full items-center justify-center"
+          iconSize={40}
+        />
       </a>
 
       {/* Info */}
@@ -247,17 +243,17 @@ function PharmacistProductRow({ product }: { product: TopicProduct }) {
   return (
     <div className="flex items-center gap-4 rounded-lg border p-3 transition-colors hover:bg-muted/30">
       {/* Thumbnail */}
-      {product.imageUrl ? (
-        <img
+      <div className="h-14 w-14 shrink-0 overflow-hidden rounded-md">
+        <ProductImage
           src={product.imageUrl}
           alt={product.name}
-          className="h-14 w-14 shrink-0 rounded-md object-cover"
+          productName={product.name}
+          productType={product.productType}
+          className="h-14 w-14 object-cover"
+          fallbackClassName="flex h-14 w-14 items-center justify-center bg-muted"
+          iconSize={24}
         />
-      ) : (
-        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-md bg-muted">
-          <Pill className="h-6 w-6 text-muted-foreground/30" />
-        </div>
-      )}
+      </div>
 
       {/* Info */}
       <div className="flex-1 min-w-0">

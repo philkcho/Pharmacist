@@ -143,7 +143,7 @@ export async function classifyTopic(
 
   try {
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       maxRetries: 0,
       schema: ClassifyTopicSchema,
       system: SYSTEM_PROMPT,

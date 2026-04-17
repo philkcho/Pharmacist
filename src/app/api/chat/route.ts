@@ -50,7 +50,7 @@ async function extractProductTerms(
 ): Promise<string[]> {
   try {
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       schema: z.object({
         terms: z
           .array(z.string())
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
     }
 
     const result = streamText({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       system: SYSTEM_PROMPT + productContext,
       messages,
     });

@@ -26,13 +26,22 @@ import {
   Store,
   ShieldCheck,
   Play,
+  BarChart3,
+  LogOut,
+  Users,
 } from "lucide-react";
+import { signOut } from "@/lib/actions/auth";
 
 const menuItems = [
   {
     title: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
+  },
+  {
+    title: "Analytics",
+    href: "/analytics",
+    icon: BarChart3,
   },
   {
     title: "Generate Article",
@@ -79,6 +88,11 @@ const menuItems = [
     href: "/review-requests",
     icon: Inbox,
   },
+  {
+    title: "Users",
+    href: "/users",
+    icon: Users,
+  },
 ];
 
 export function AdminSidebar() {
@@ -87,13 +101,22 @@ export function AdminSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="border-b px-6 py-4">
-        <Link href="/dashboard" className="flex items-center gap-2">
-          <Pill className="h-5 w-5 text-primary" />
-          <span className="text-lg font-bold">Dr.pharmacist</span>
-          <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
-            Admin
-          </span>
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <Pill className="h-5 w-5 text-primary" />
+            <span className="text-lg font-bold">Dr.pharmacist</span>
+            <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary">
+              Admin
+            </span>
+          </Link>
+          <Link
+            href="/"
+            className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            title="Go to Homepage"
+          >
+            <ExternalLink className="h-4 w-4" />
+          </Link>
+        </div>
       </SidebarHeader>
 
       <SidebarContent>
@@ -117,7 +140,7 @@ export function AdminSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t p-4">
+      <SidebarFooter className="border-t p-4 pb-6 space-y-3">
         <Link
           href="/"
           className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
@@ -125,6 +148,15 @@ export function AdminSidebar() {
           <ExternalLink className="h-4 w-4" />
           View Site
         </Link>
+        <form action={signOut}>
+          <button
+            type="submit"
+            className="flex w-full items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign Out
+          </button>
+        </form>
       </SidebarFooter>
     </Sidebar>
   );

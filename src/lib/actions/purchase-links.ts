@@ -20,11 +20,26 @@ interface RetailerSearchConfig {
   buildSearchUrl: (productName: string) => string;
 }
 
+/**
+ * Build a more specific search URL by emphasizing exact brand/product match.
+ * Amazon's search ranking respects quoted phrases, so we wrap the name in
+ * quotes when possible. This reduces unrelated results for supplements.
+ */
+function exactMatchQuery(name: string): string {
+  // Strip common marketing words that hurt search accuracy
+  const cleaned = name
+    .replace(/\b(the|extra strength|maximum|ultra|original)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return `"${cleaned}"`;
+}
+
 const RETAILER_SEARCH_URLS: RetailerSearchConfig[] = [
   {
     slug: "amazon",
     buildSearchUrl: (name) =>
-      `https://www.amazon.com/s?k=${encodeURIComponent(name)}`,
+      `https://www.amazon.com/s?k=${encodeURIComponent(exactMatchQuery(name))}&i=hpc`,
+    // i=hpc restricts to Health & Household category for better relevance
   },
   {
     slug: "iherb",

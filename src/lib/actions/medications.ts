@@ -606,3 +606,286 @@ export async function getMedicationCountsByCategory(): Promise<
   }
   return counts;
 }
+
+/**
+ * Import SAMPLE_PRODUCTS from topics.ts into DB with AI-generated
+ * analysis, images, and purchase links. Skips products already in DB.
+ */
+export async function importSampleProducts(): Promise<{
+  success: boolean;
+  imported: number;
+  skipped: number;
+  errors: number;
+  message: string;
+}> {
+  const { SAMPLE_PRODUCTS } = await import("@/lib/data/sample-products");
+  const { generateProductAnalysis } = await import(
+    "@/lib/ai/generate-product-analysis"
+  );
+  const { fetchRealProductImage } = await import(
+    "@/lib/images/search-product-image"
+  );
+  const { autoGeneratePurchaseLinks } = await import(
+    "@/lib/actions/purchase-links"
+  );
+
+  const supabase = await createClient();
+
+  // Flatten SAMPLE_PRODUCTS into a unique list by product name
+  const seen = new Set<string>();
+  const allProducts: {
+    name: string;
+    imageUrl: string;
+    description: string;
+    retailerSlug: string;
+    productUrl: string;
+    keyword: string;
+  }[] = [];
+
+  for (const [keyword, retailerMap] of Object.entries(SAMPLE_PRODUCTS)) {
+    for (const [retailerSlug, products] of Object.entries(retailerMap)) {
+      for (const p of products) {
+        if (seen.has(p.name.toLowerCase())) continue;
+        seen.add(p.name.toLowerCase());
+        allProducts.push({
+          name: p.name,
+          imageUrl: p.imageUrl,
+          description: p.description,
+          retailerSlug,
+          productUrl: p.url,
+          keyword,
+        });
+      }
+    }
+  }
+
+  let imported = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (const product of allProducts) {
+    try {
+      // Check if already in DB
+      const productSlug = slugify(product.name);
+      const { data: existing } = await supabase
+        .from("medications")
+        .select("id")
+        .eq("slug", productSlug)
+        .maybeSingle();
+
+      if (existing) {
+        skipped++;
+        continue;
+      }
+
+      // Infer product_type from keyword
+      const productType = inferProductType(product.keyword);
+
+      // Generate AI analysis
+      const analysis = await generateProductAnalysis(
+        product.name,
+        productType,
+        product.description
+      );
+
+      // Real product image via Google Custom Search (null → placeholder)
+      const imageUrl = await fetchRealProductImage(product.name);
+
+      // Insert product
+      const { data: inserted, error: insertError } = await supabase
+        .from("medications")
+        .insert({
+          name: product.name,
+          slug: productSlug,
+          description: product.description,
+          image_url: imageUrl,
+          product_type: productType,
+          approval_status: "approved",
+          approved_at: new Date().toISOString(),
+          source: "manual",
+          is_otc: true,
+          verdict: analysis.verdict,
+          pros: analysis.pros,
+          cons: analysis.cons,
+          ingredient_analysis: analysis.ingredientAnalysis,
+          recommended_for: analysis.recommendedFor,
+        })
+        .select("id")
+        .single();
+
+      if (insertError || !inserted) {
+        console.error(
+          `[import] Insert failed for ${product.name}:`,
+          insertError?.message
+        );
+        errors++;
+        continue;
+      }
+
+      // Generate purchase links based on product type
+      await autoGeneratePurchaseLinks(
+        inserted.id as number,
+        product.name,
+        productType
+      );
+
+      imported++;
+    } catch (e) {
+      console.error(
+        `[import] Failed for ${product.name}:`,
+        e instanceof Error ? e.message : e
+      );
+      errors++;
+    }
+  }
+
+  revalidatePath("/medications");
+  revalidatePath("/");
+  revalidatePath("/topics", "layout");
+
+  return {
+    success: true,
+    imported,
+    skipped,
+    errors,
+    message: `Imported ${imported} products (${skipped} already existed, ${errors} errors)`,
+  };
+}
+
+function inferProductType(keyword: string): string {
+  const lower = keyword.toLowerCase();
+  if (
+    lower.includes("sunscreen") ||
+    lower.includes("spf")
+  )
+    return "quasi_drug";
+  if (
+    lower.includes("moisturizer") ||
+    lower.includes("cream") ||
+    lower.includes("serum") ||
+    lower.includes("cleanser") ||
+    lower.includes("toner") ||
+    lower.includes("k-beauty") ||
+    lower.includes("acne")
+  )
+    return "cosmetic";
+  if (
+    lower.includes("vitamin") ||
+    lower.includes("supplement") ||
+    lower.includes("b12") ||
+    lower.includes("melatonin") ||
+    lower.includes("collagen")
+  )
+    return "supplement";
+  return "otc_drug";
+}
+
+/**
+ * Fetch real product images via Google Custom Search for products that
+ * currently have NO image OR have a legacy AI-generated image
+ * (Pollinations). Skips products that already have a non-AI URL.
+ *
+ * Respects Google CSE's 100/day free tier — on quota exhaustion the
+ * search returns null and this function skips that product quietly.
+ * Re-run the next day to continue.
+ */
+export async function generateMissingProductImages(): Promise<{
+  success: boolean;
+  generated: number;
+  skipped: number;
+  errors: number;
+  message: string;
+}> {
+  const { fetchRealProductImage } = await import(
+    "@/lib/images/search-product-image"
+  );
+  const supabase = await createClient();
+
+  const { data: products, error: fetchError } = await supabase
+    .from("medications")
+    .select("id, name, product_type, image_url");
+
+  if (fetchError) {
+    return {
+      success: false,
+      generated: 0,
+      skipped: 0,
+      errors: 0,
+      message: fetchError.message,
+    };
+  }
+
+  if (!products || products.length === 0) {
+    return {
+      success: true,
+      generated: 0,
+      skipped: 0,
+      errors: 0,
+      message: "No products in DB.",
+    };
+  }
+
+  // Targets: missing images + legacy AI (Pollinations) images.
+  // Real CDN URLs (retailer CDNs, googleusercontent, etc.) are kept.
+  const missing = products.filter((p) => {
+    const url = (p.image_url as string | null) ?? "";
+    if (url.trim() === "") return true;
+    if (url.includes("pollinations.ai")) return true;
+    return false;
+  });
+
+  if (missing.length === 0) {
+    return {
+      success: true,
+      generated: 0,
+      skipped: products.length,
+      errors: 0,
+      message: "All products already have images.",
+    };
+  }
+
+  let generated = 0;
+  let errors = 0;
+
+  for (const product of missing) {
+    try {
+      const imageUrl = await fetchRealProductImage(product.name as string);
+      if (!imageUrl) {
+        // No match — skip (don't overwrite with null, don't count as error)
+        continue;
+      }
+
+      const { error: updateError } = await supabase
+        .from("medications")
+        .update({ image_url: imageUrl })
+        .eq("id", product.id as number);
+
+      if (updateError) {
+        console.error(
+          `[image-gen] Failed to update product ${product.id}:`,
+          updateError.message
+        );
+        errors++;
+      } else {
+        generated++;
+      }
+    } catch (e) {
+      console.error(
+        `[image-gen] Search failed for product ${product.id}:`,
+        e instanceof Error ? e.message : e
+      );
+      errors++;
+    }
+  }
+
+  revalidatePath("/medications");
+  revalidatePath("/");
+
+  return {
+    success: true,
+    generated,
+    skipped: products.length - missing.length,
+    errors,
+    message: `Generated ${generated} images (${errors} errors, ${products.length - missing.length} skipped)`,
+  };
+}

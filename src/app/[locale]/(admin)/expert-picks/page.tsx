@@ -4,7 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Play, Plus, Trash2, Eye, EyeOff } from "lucide-react";
+import {
+  FileText,
+  Plus,
+  Trash2,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Pill,
+} from "lucide-react";
 import {
   listAllExpertPicks,
   publishExpertPick,
@@ -16,7 +24,6 @@ import {
 export default function ExpertAdminPage() {
   const [picks, setPicks] = useState<ExpertPickRow[]>([]);
   const [loading, setLoading] = useState(true);
-
   const load = async () => {
     setLoading(true);
     const data = await listAllExpertPicks();
@@ -39,7 +46,7 @@ export default function ExpertAdminPage() {
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm("Delete this expert pick?")) return;
+    if (!confirm("Delete this expert analysis?")) return;
     await deleteExpertPick(id);
     load();
   };
@@ -49,16 +56,16 @@ export default function ExpertAdminPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
-            <Play className="h-6 w-6 text-primary" />
+            <FileText className="h-6 w-6 text-primary" />
             Dr.&apos;s Analysis
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            YouTube expert video analyses
+            Expert-backed articles with analysis and product recommendations
           </p>
         </div>
         <Button render={<Link href="/expert-picks/new" />}>
           <Plus className="mr-2 h-4 w-4" />
-          Add Video
+          New Analysis
         </Button>
       </div>
 
@@ -68,90 +75,124 @@ export default function ExpertAdminPage() {
         </div>
       ) : picks.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          <Play className="mx-auto h-10 w-10 opacity-50" />
-          <p className="mt-3">No expert picks yet</p>
+          <FileText className="mx-auto h-10 w-10 opacity-50" />
+          <p className="mt-3">No analyses yet</p>
           <p className="mt-1 text-sm">
-            Add a YouTube URL to get started
+            Create your first expert-backed analysis to get started
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {picks.map((pick) => (
-            <div
+            <ExpertPickAdminCard
               key={pick.id}
-              className="flex items-center gap-4 rounded-lg border p-4"
-            >
-              {/* Thumbnail */}
-              <div className="h-20 w-36 shrink-0 overflow-hidden rounded bg-muted">
-                {pick.thumbnailUrl ? (
-                  <img
-                    src={pick.thumbnailUrl}
-                    alt={pick.title}
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full items-center justify-center">
-                    <Play className="h-6 w-6 text-muted-foreground/50" />
-                  </div>
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <h3 className="truncate font-medium">{pick.title}</h3>
-                  <Badge
-                    variant={
-                      pick.status === "published" ? "default" : "secondary"
-                    }
-                    className="shrink-0"
-                  >
-                    {pick.status}
-                  </Badge>
-                </div>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {pick.expertName}
-                  {pick.expertCredential && ` — ${pick.expertCredential}`}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  {pick.category} · {pick.duration ?? "N/A"}
-                </p>
-              </div>
-
-              {/* Actions */}
-              <div className="flex shrink-0 items-center gap-2">
-                {pick.status === "draft" ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handlePublish(pick.id)}
-                  >
-                    <Eye className="mr-1 h-3 w-3" />
-                    Publish
-                  </Button>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleUnpublish(pick.id)}
-                  >
-                    <EyeOff className="mr-1 h-3 w-3" />
-                    Unpublish
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive"
-                  onClick={() => handleDelete(pick.id)}
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
+              pick={pick}
+              onPublish={() => handlePublish(pick.id)}
+              onUnpublish={() => handleUnpublish(pick.id)}
+              onDelete={() => handleDelete(pick.id)}
+            />
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ExpertPickAdminCard({
+  pick,
+  onPublish,
+  onUnpublish,
+  onDelete,
+}: {
+  pick: ExpertPickRow;
+  onPublish: () => void;
+  onUnpublish: () => void;
+  onDelete: () => void;
+}) {
+  const categoryLabel =
+    pick.category === "health"
+      ? "Health"
+      : pick.category === "skin-care"
+        ? "Skin Care"
+        : "Wellness";
+
+  // published 카드는 홈페이지처럼 전체를 클릭해 상세 페이지로 이동,
+  // draft는 미리보기 불가 — 커버/제목은 일반 블록으로 렌더
+  const isPublished = pick.status === "published";
+  const CoverWrapper: React.ElementType = isPublished ? Link : "div";
+  const coverProps = isPublished
+    ? { href: `/expert/${pick.slug}`, target: "_blank" as const }
+    : {};
+
+  return (
+    <div className="group flex flex-col overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md">
+      {/* Title on top + compact brand strip (published일 때 전체 클릭 가능) */}
+      <CoverWrapper {...coverProps} className="block flex-1">
+        <div className="p-4">
+          <div className="mb-2 flex items-center gap-1">
+            <Badge
+              variant={isPublished ? "default" : "secondary"}
+              className="text-xs"
+            >
+              {pick.status}
+            </Badge>
+            <Badge variant="secondary" className="text-xs">
+              {categoryLabel}
+            </Badge>
+            {isPublished && (
+              <ExternalLink className="ml-auto h-3.5 w-3.5 text-muted-foreground" />
+            )}
+          </div>
+          <h3
+            className={`line-clamp-3 font-semibold leading-snug ${
+              isPublished ? "group-hover:text-primary" : ""
+            }`}
+          >
+            {pick.title}
+          </h3>
+        </div>
+        <div className="mt-auto flex items-center justify-center gap-1.5 border-t bg-primary/5 px-3 py-2">
+          <Pill className="h-3.5 w-3.5 text-primary" />
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Dr.&apos;s Analysis
+          </span>
+        </div>
+      </CoverWrapper>
+
+      {/* Actions (별도 영역 — 카드 링크와 분리) */}
+      <div className="px-4 pb-4">
+        <div className="flex items-center gap-2">
+          {pick.status === "draft" ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1"
+              onClick={onPublish}
+            >
+              <Eye className="mr-1 h-3 w-3" />
+              Publish
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1"
+              onClick={onUnpublish}
+            >
+              <EyeOff className="mr-1 h-3 w-3" />
+              Unpublish
+            </Button>
+          )}
+          <Button
+            size="sm"
+            variant="ghost"
+            className="text-destructive hover:text-destructive"
+            onClick={onDelete}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

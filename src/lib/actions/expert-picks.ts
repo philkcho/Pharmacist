@@ -23,12 +23,63 @@ export type ExpertPickRow = {
   category: string;
   summary: string | null;
   keyTakeaways: string[] | null;
+  cleanTranscript?: string | null;
+  properNotes?: { heading: string; bullets: string[] }[] | null;
   analysisSections: { title: string; content: string }[] | null;
-  mentionedProducts: { name: string; slug?: string; reason: string }[] | null;
+  mentionedProducts:
+    | {
+        name: string;
+        slug?: string;
+        reason: string;
+        shopKeyword?: string;
+        imageUrl?: string | null;
+      }[]
+    | null;
   status: string;
   publishedAt: string | null;
   createdAt: string | null;
 };
+
+/**
+ * Map DB snake_case row to ExpertPickRow camelCase shape.
+ */
+function mapRow(row: Record<string, unknown>): ExpertPickRow {
+  return {
+    id: row.id as number,
+    slug: row.slug as string,
+    youtubeUrl: row.youtube_url as string,
+    youtubeId: row.youtube_id as string,
+    title: row.title as string,
+    expertName: row.expert_name as string,
+    expertCredential: (row.expert_credential as string | null) ?? null,
+    thumbnailUrl: (row.thumbnail_url as string | null) ?? null,
+    duration: (row.duration as string | null) ?? null,
+    category: row.category as string,
+    summary: (row.summary as string | null) ?? null,
+    keyTakeaways: (row.key_takeaways as string[] | null) ?? null,
+    cleanTranscript: (row.clean_transcript as string | null) ?? null,
+    properNotes:
+      (row.proper_notes as { heading: string; bullets: string[] }[] | null) ??
+      null,
+    analysisSections:
+      (row.analysis_sections as
+        | { title: string; content: string }[]
+        | null) ?? null,
+    mentionedProducts:
+      (row.mentioned_products as
+        | {
+            name: string;
+            slug?: string;
+            reason: string;
+            shopKeyword?: string;
+            imageUrl?: string | null;
+          }[]
+        | null) ?? null,
+    status: row.status as string,
+    publishedAt: (row.published_at as string | null) ?? null,
+    createdAt: (row.created_at as string | null) ?? null,
+  };
+}
 
 /**
  * List published expert picks for public pages.
@@ -48,11 +99,13 @@ export async function listPublishedExpertPicks(
     console.error("[expert-picks] list error:", error.message);
     return [];
   }
-  return (data ?? []) as ExpertPickRow[];
+  return (data ?? []).map(mapRow);
 }
 
 /**
- * Get a single expert pick by slug.
+ * Get a single expert pick by slug, with mentionedProducts' imageUrl
+ * refreshed from the medications table (the source of truth).
+ * The JSON-stored imageUrl is kept as a fallback if the lookup fails.
  */
 export async function getExpertPickBySlug(
   slug: string
@@ -68,7 +121,38 @@ export async function getExpertPickBySlug(
     console.error("[expert-picks] get error:", error.message);
     return null;
   }
-  return data as ExpertPickRow;
+  const pick = mapRow(data);
+
+  // Pull latest image_url from medications for each mentioned product.
+  // Keeps the detail page in sync with admin image refreshes without
+  // rewriting the expert_picks JSON.
+  if (pick.mentionedProducts && pick.mentionedProducts.length > 0) {
+    const slugs = pick.mentionedProducts
+      .map((p) => p.slug)
+      .filter((s): s is string => !!s);
+
+    if (slugs.length > 0) {
+      const { data: meds } = await supabase
+        .from("medications")
+        .select("slug, image_url")
+        .in("slug", slugs);
+
+      if (meds && meds.length > 0) {
+        const imageBySlug = new Map<string, string | null>();
+        for (const m of meds) {
+          imageBySlug.set(m.slug as string, (m.image_url as string | null) ?? null);
+        }
+        pick.mentionedProducts = pick.mentionedProducts.map((p) => ({
+          ...p,
+          imageUrl: p.slug
+            ? imageBySlug.get(p.slug) ?? p.imageUrl ?? null
+            : p.imageUrl ?? null,
+        }));
+      }
+    }
+  }
+
+  return pick;
 }
 
 /**
@@ -76,16 +160,18 @@ export async function getExpertPickBySlug(
  */
 export async function listAllExpertPicks(): Promise<ExpertPickRow[]> {
   const supabase = await createAdminClient();
+  // 최근 발행한 것을 맨 앞으로. published_at 이 없는 draft는 뒤에,
+  // 그 안에서는 created_at 최신순.
   const { data, error } = await supabase
     .from("expert_picks")
     .select("*")
-    .order("created_at", { ascending: false });
+    .order("published_at", { ascending: false });
 
   if (error) {
     console.error("[expert-picks] list all error:", error.message);
     return [];
   }
-  return (data ?? []) as ExpertPickRow[];
+  return (data ?? []).map(mapRow);
 }
 
 /**
@@ -130,9 +216,62 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
     return { success: false, error: `AI analysis failed: ${errMsg}` };
   }
 
-  // 4. Generate slug & thumbnail
+  // 4. Generate slug & cover image
   const slug = slugifyTitle(analysis.title);
-  const thumbnailUrl = getYoutubeThumbnail(videoId);
+
+  // Try AI-generated cover image first (article style).
+  // Fall back to YouTube thumbnail if generation fails.
+  let thumbnailUrl: string;
+  try {
+    const { generateTrendImageUrl } = await import(
+      "@/lib/ai/generate-trend-image"
+    );
+    thumbnailUrl = await generateTrendImageUrl(
+      analysis.title,
+      analysis.category,
+      analysis.title
+    );
+  } catch {
+    thumbnailUrl = getYoutubeThumbnail(videoId);
+  }
+
+  // 4.5. Ensure every mentioned product exists in DB with image + analysis
+  // so the /expert/[slug] page never shows blank product cards.
+  const enrichedProducts: {
+    name: string;
+    slug?: string;
+    reason: string;
+    shopKeyword?: string;
+    imageUrl?: string | null;
+  }[] = [];
+  for (const product of analysis.mentionedProducts) {
+    try {
+      const { ensureProductComplete } = await import("@/lib/actions/ensure-product-complete");
+      const ensured = await ensureProductComplete({
+        name: product.name,
+        categorySlug: analysis.category,
+      });
+      enrichedProducts.push({
+        name: product.name,
+        slug: ensured?.slug,
+        reason: product.reason,
+        shopKeyword: product.shopKeyword,
+        imageUrl: ensured?.imageUrl ?? null,
+      });
+    } catch (err) {
+      console.warn(
+        "[expert-picks] ensureProductComplete failed for",
+        product.name,
+        err instanceof Error ? err.message : err
+      );
+      // Fall back to original product entry if enrichment fails
+      enrichedProducts.push({
+        name: product.name,
+        reason: product.reason,
+        shopKeyword: product.shopKeyword,
+      });
+    }
+  }
 
   // 5. Save to DB
   const supabase = await createAdminClient();
@@ -148,10 +287,12 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
       thumbnail_url: thumbnailUrl,
       category: analysis.category,
       transcript,
+      clean_transcript: analysis.cleanTranscript,
       summary: analysis.summary,
       key_takeaways: analysis.keyTakeaways,
+      proper_notes: analysis.properNotes,
       analysis_sections: analysis.analysisSections,
-      mentioned_products: analysis.mentionedProducts,
+      mentioned_products: enrichedProducts,
       status: "draft",
     })
     .select("id")
@@ -224,4 +365,87 @@ export async function deleteExpertPick(id: number): Promise<boolean> {
   revalidatePath("/");
   revalidatePath("/expert");
   return true;
+}
+
+/**
+ * Regenerate AI cover image for all expert picks based on title/category.
+ * Uses Pollinations.ai — free, no API key required.
+ */
+export async function regenerateExpertPickImages(): Promise<{
+  success: boolean;
+  updated: number;
+  errors: number;
+  message: string;
+}> {
+  const { generateTrendImageUrl } = await import(
+    "@/lib/ai/generate-trend-image"
+  );
+  const supabase = await createAdminClient();
+
+  const { data: picks, error: fetchError } = await supabase
+    .from("expert_picks")
+    .select("id, title, category");
+
+  if (fetchError) {
+    return {
+      success: false,
+      updated: 0,
+      errors: 0,
+      message: fetchError.message,
+    };
+  }
+
+  if (!picks || picks.length === 0) {
+    return {
+      success: true,
+      updated: 0,
+      errors: 0,
+      message: "No expert picks found.",
+    };
+  }
+
+  let updated = 0;
+  let errors = 0;
+
+  for (const pick of picks) {
+    try {
+      const imageUrl = await generateTrendImageUrl(
+        pick.title as string,
+        pick.category as string,
+        pick.title as string
+      );
+
+      const { error: updateError } = await supabase
+        .from("expert_picks")
+        .update({ thumbnail_url: imageUrl })
+        .eq("id", pick.id as number);
+
+      if (updateError) {
+        console.error(
+          `[expert-picks] image update failed for ${pick.id}:`,
+          updateError.message
+        );
+        errors++;
+      } else {
+        updated++;
+      }
+    } catch (e) {
+      console.error(
+        `[expert-picks] image generation failed for ${pick.id}:`,
+        e instanceof Error ? e.message : e
+      );
+      errors++;
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/expert");
+  revalidatePath("/expert-picks");
+
+  return {
+    success: true,
+    updated,
+    errors,
+    message: `Regenerated ${updated} images${errors > 0 ? ` (${errors} errors)` : ""}`,
+  };
 }

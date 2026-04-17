@@ -1,7 +1,7 @@
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AdminSidebar } from "@/components/admin/admin-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { getSession } from "@/lib/actions/auth";
+import { getSession, isPharmacist } from "@/lib/actions/auth";
 import { redirect } from "next/navigation";
 
 export default async function AdminLayout({
@@ -13,6 +13,11 @@ export default async function AdminLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  const pharmacist = await isPharmacist();
+  if (!pharmacist) {
+    redirect("/");
   }
 
   return (

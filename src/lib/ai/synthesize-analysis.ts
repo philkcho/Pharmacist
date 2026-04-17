@@ -382,7 +382,7 @@ export async function synthesizeAnalysis(
   let rawAnalysis: z.infer<typeof SynthesisSchema>;
   try {
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       maxRetries: 0,
       schema: SynthesisSchema,
       system: SYSTEM_PROMPT,

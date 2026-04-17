@@ -3,6 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
+import { PageTracker } from "@/components/analytics/page-tracker";
+import { OrganizationJsonLd } from "@/components/seo/json-ld";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,13 +17,46 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
+
 export const metadata: Metadata = {
   title: {
     default: "Dr.pharmacist — Expert OTC Medication Recommendations",
     template: "%s | Dr.pharmacist",
   },
   description:
-    "Pharmacist-reviewed recommendations for over-the-counter medications. Trusted advice from licensed pharmacists.",
+    "Pharmacist-reviewed health & beauty analysis. Evidence-based product reviews, ingredient breakdowns, and safety data from FDA, PubMed, and FAERS.",
+  metadataBase: new URL(SITE_URL),
+  applicationName: "Dr.pharmacist",
+  authors: [{ name: "Dr.pharmacist" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    siteName: "Dr.pharmacist",
+    title: "Dr.pharmacist — Evidence-Based Health & Beauty Analysis",
+    description:
+      "Pharmacist-reviewed product analysis backed by FDA data, clinical research, and ingredient science.",
+    url: SITE_URL,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dr.pharmacist",
+    description:
+      "We read the science so you don't have to. Pharmacist-reviewed health & beauty analysis.",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-snippet": -1,
+      "max-image-preview": "large",
+    },
+  },
+  alternates: {
+    canonical: SITE_URL,
+  },
 };
 
 export default async function LocaleLayout({
@@ -43,7 +78,9 @@ export default async function LocaleLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <OrganizationJsonLd />
         <NextIntlClientProvider>
+          <PageTracker />
           {children}
         </NextIntlClientProvider>
       </body>

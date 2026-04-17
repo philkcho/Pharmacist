@@ -187,7 +187,7 @@ const AiAnalysisSchema = z.object({
 async function generateAiAnalysis(query: string): Promise<AiAnalysis | null> {
   try {
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       maxRetries: 0,
       schema: AiAnalysisSchema,
       system: `You are a licensed pharmacist (PharmD) helping a consumer understand an OTC product they searched for. A human pharmacist will review your analysis before it is ever published on the site, but users may see a draft version in the meantime — so be honest and conservative.

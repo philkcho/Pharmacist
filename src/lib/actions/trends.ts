@@ -554,7 +554,7 @@ export async function analyzeTrend(
             analysisResult.synthesis ?? analysisResult.refusal ?? null,
           product_matches_jsonb: analysisResult.productMatches,
           market_reaction_jsonb: analysisResult.marketReaction,
-          ai_model: "gemini-2.5-flash",
+          ai_model: "gemini-2.5-pro",
           generated_at: now,
         },
         { onConflict: "trend_topic_id" }

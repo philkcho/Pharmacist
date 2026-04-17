@@ -28,7 +28,7 @@ export async function POST(req: Request) {
 
   try {
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       maxRetries: 0,
       schema: ReferencesSchema,
       system: `You are a medical research librarian helping a pharmacist find authoritative references for an OTC medication article.

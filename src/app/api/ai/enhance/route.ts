@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   const { content, instruction } = await req.json();
 
   const result = streamText({
-    model: google("gemini-2.5-flash"),
+    model: google("gemini-2.5-pro"),
     maxRetries: 0,
     system: `You are a licensed pharmacist (PharmD) editing an OTC medication recommendation article for a health website called "Dr.pharmacist."
 

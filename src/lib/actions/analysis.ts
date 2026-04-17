@@ -39,14 +39,13 @@ export interface AnalysisPageData {
   warnings: string | null;
   sideEffects: string | null;
   purchaseOptions: PurchaseOption[];
-  retailerSearchUrls: Array<{ name: string; url: string; emoji: string }>;
 }
 
-const RETAILER_TEMPLATES: Record<string, { build: (q: string) => string; emoji: string }> = {
-  amazon: { build: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`, emoji: "🛒" },
-  iherb: { build: (q) => `https://www.iherb.com/search?kw=${encodeURIComponent(q)}`, emoji: "🌿" },
-  stylekorean: { build: (q) => `https://www.stylekorean.com/shop/search/result.php?search_str=${encodeURIComponent(q)}`, emoji: "🇰🇷" },
-  yesstyle: { build: (q) => `https://www.yesstyle.com/en/search?q=${encodeURIComponent(q)}`, emoji: "✨" },
+const RETAILER_EMOJI: Record<string, string> = {
+  amazon: "🛒",
+  iherb: "🌿",
+  stylekorean: "🇰🇷",
+  yesstyle: "✨",
 };
 
 function parseText(field: unknown): string {
@@ -131,21 +130,6 @@ export async function getProductAnalysis(
     }
   }
 
-  // Build retailer search URLs (always available)
-  const searchName = med ? (med.name as string) : decoded;
-  const { data: retailers } = await supabase
-    .from("retailers")
-    .select("name, slug")
-    .eq("is_active", true);
-
-  const retailerSearchUrls = (retailers ?? [])
-    .filter((r) => RETAILER_TEMPLATES[r.slug as string])
-    .map((r) => ({
-      name: r.name as string,
-      url: RETAILER_TEMPLATES[r.slug as string].build(searchName),
-      emoji: RETAILER_TEMPLATES[r.slug as string].emoji,
-    }));
-
   if (med) {
     return {
       found: true,
@@ -164,11 +148,10 @@ export async function getProductAnalysis(
       warnings: (med.warnings as string) ?? null,
       sideEffects: (med.side_effects as string) ?? null,
       purchaseOptions,
-      retailerSearchUrls,
     };
   }
 
-  // Not found in DB — return shell with search URLs
+  // Not found in DB — return shell without purchase links
   return {
     found: false,
     productName: decoded.charAt(0).toUpperCase() + decoded.slice(1),
@@ -186,6 +169,5 @@ export async function getProductAnalysis(
     warnings: null,
     sideEffects: null,
     purchaseOptions: [],
-    retailerSearchUrls,
   };
 }

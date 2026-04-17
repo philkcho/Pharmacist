@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { Play, ArrowLeft } from "lucide-react";
+import { FileText, ArrowLeft, Pill } from "lucide-react";
 import Link from "next/link";
 import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
 import type { Metadata } from "next";
@@ -27,7 +27,7 @@ export default async function ExpertIndexPage() {
           Home
         </Link>
         <h1 className="flex items-center gap-2 text-2xl font-bold sm:text-3xl">
-          <Play className="h-6 w-6 text-primary" />
+          <FileText className="h-6 w-6 text-primary" />
           Dr.&apos;s Analysis
         </h1>
         <p className="mt-2 text-muted-foreground">
@@ -39,7 +39,7 @@ export default async function ExpertIndexPage() {
       {/* Content */}
       {picks.length === 0 ? (
         <div className="rounded-lg border border-dashed p-12 text-center text-muted-foreground">
-          <Play className="mx-auto h-10 w-10 opacity-50" />
+          <FileText className="mx-auto h-10 w-10 opacity-50" />
           <p className="mt-3 text-lg font-medium">Coming soon</p>
           <p className="mt-1 text-sm">
             Expert video analyses are being curated. Check back soon!
@@ -71,57 +71,23 @@ function ExpertPickCard({
   return (
     <Link
       href={`/expert/${pick.slug}`}
-      className="group overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md"
+      className="group flex flex-col overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md"
     >
-      {/* Thumbnail */}
-      <div className="relative aspect-video bg-muted">
-        {pick.thumbnailUrl ? (
-          <img
-            src={pick.thumbnailUrl}
-            alt={pick.title}
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Play className="h-10 w-10 text-muted-foreground/50" />
-          </div>
-        )}
-        <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition-colors group-hover:bg-black/10">
-          <div className="rounded-full bg-black/60 p-3 transition-transform group-hover:scale-110">
-            <Play className="h-6 w-6 fill-white text-white" />
-          </div>
-        </div>
-        {pick.duration && (
-          <span className="absolute bottom-2 right-2 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
-            {pick.duration}
-          </span>
-        )}
-        <Badge variant="secondary" className="absolute left-2 top-2 text-xs">
+      {/* Info — title prominent on top */}
+      <div className="p-4">
+        <Badge variant="secondary" className="mb-2 text-xs">
           {categoryLabel}
         </Badge>
-      </div>
-
-      {/* Info */}
-      <div className="p-4">
-        <h3 className="line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">
+        <h3 className="line-clamp-3 font-semibold leading-snug group-hover:text-primary">
           {pick.title}
         </h3>
-        <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">
-          1-min summary + ingredient analysis + where to buy
-        </p>
-        <div className="mt-2 flex items-center gap-1.5">
-          <div className="flex h-5 w-5 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
-            Rx
-          </div>
-          <div>
-            <p className="text-xs font-medium">{pick.expertName}</p>
-            {pick.expertCredential && (
-              <p className="text-[11px] text-muted-foreground">
-                {pick.expertCredential}
-              </p>
-            )}
-          </div>
-        </div>
+      </div>
+      {/* Compact Dr.pharmacist brand strip */}
+      <div className="mt-auto flex items-center justify-center gap-1.5 border-t bg-primary/5 px-3 py-2">
+        <Pill className="h-3.5 w-3.5 text-primary" />
+        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Dr.&apos;s Analysis
+        </span>
       </div>
     </Link>
   );

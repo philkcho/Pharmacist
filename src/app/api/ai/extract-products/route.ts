@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
   try {
     const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
+      model: google("gemini-2.5-pro"),
       maxRetries: 0,
       schema: ProductsSchema,
       system: `You are a licensed pharmacist (PharmD) extracting structured product analysis from an OTC medication article.

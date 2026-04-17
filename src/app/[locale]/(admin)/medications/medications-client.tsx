@@ -41,12 +41,16 @@ import {
   Loader2,
   Database,
   Cloud,
+  Image as ImageIcon,
+  PackagePlus,
 } from "lucide-react";
 import {
   createMedication,
   updateMedication,
   deleteMedication,
   previewMedicationFromFda,
+  generateMissingProductImages,
+  importSampleProducts,
 } from "@/lib/actions/medications";
 
 interface Medication {
@@ -117,6 +121,36 @@ export function MedicationsClient({
   const [fdaSearchTerm, setFdaSearchTerm] = useState("");
   const [fdaResult, setFdaResult] = useState<PreviewResult | null>(null);
   const [fdaPending, startFdaTransition] = useTransition();
+
+  // Image generation state
+  const [imageGenPending, startImageGenTransition] = useTransition();
+  const [imageGenResult, setImageGenResult] = useState<string | null>(null);
+
+  const handleGenerateImages = () => {
+    if (!confirm("Generate AI images for products without images? This may take a minute.")) return;
+    startImageGenTransition(async () => {
+      setImageGenResult(null);
+      const result = await generateMissingProductImages();
+      setImageGenResult(result.message);
+      if (result.generated > 0) router.refresh();
+    });
+  };
+
+  const [importPending, startImportTransition] = useTransition();
+  const handleImportSamples = () => {
+    if (
+      !confirm(
+        "Import sample products from topics data? This generates AI analysis + images for each. May take several minutes."
+      )
+    )
+      return;
+    startImportTransition(async () => {
+      setImageGenResult(null);
+      const result = await importSampleProducts();
+      setImageGenResult(result.message);
+      if (result.imported > 0) router.refresh();
+    });
+  };
 
   const handleFdaFetch = () => {
     if (!fdaSearchTerm.trim()) return;
@@ -199,11 +233,43 @@ export function MedicationsClient({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Medications</h1>
-        <Button onClick={handleOpenNew}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add Medication
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleImportSamples}
+            disabled={importPending}
+          >
+            {importPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <PackagePlus className="mr-2 h-4 w-4" />
+            )}
+            Import Samples
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleGenerateImages}
+            disabled={imageGenPending}
+          >
+            {imageGenPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <ImageIcon className="mr-2 h-4 w-4" />
+            )}
+            Refresh Images
+          </Button>
+          <Button onClick={handleOpenNew}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add Medication
+          </Button>
+        </div>
       </div>
+
+      {imageGenResult && (
+        <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+          {imageGenResult}
+        </div>
+      )}
 
       {/* FDA fetch utility */}
       <Card>
