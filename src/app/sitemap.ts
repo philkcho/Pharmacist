@@ -12,6 +12,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/en/about`, changeFrequency: "monthly", priority: 0.5 },
     { url: `${SITE_URL}/en/trending`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/en/expert`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/en/search`, changeFrequency: "weekly", priority: 0.4 },
   ];
 
   // Published trend articles
@@ -55,5 +56,70 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticPages, ...trendPages, ...expertPages, ...productPages];
+  // "Is X Safe?" SEO pages — one per approved product.
+  // These target long-tail safety queries (pregnancy, alcohol, interactions).
+  const safetyPages: MetadataRoute.Sitemap = (products ?? []).map((p) => ({
+    url: `${SITE_URL}/en/is-safe/${p.slug}`,
+    lastModified: p.updated_at ?? undefined,
+    changeFrequency: "monthly" as const,
+    priority: 0.7, // slightly higher — higher search intent
+  }));
+
+  // Cached product comparisons (generated on-demand, persisted)
+  const { data: comparisons } = await admin
+    .from("product_comparisons")
+    .select("slug_a, slug_b, updated_at");
+
+  const comparisonPages: MetadataRoute.Sitemap = (comparisons ?? []).map(
+    (c) => ({
+      url: `${SITE_URL}/en/compare/${c.slug_a}-vs-${c.slug_b}`,
+      lastModified: c.updated_at ?? undefined,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })
+  );
+
+  // Cached ingredient guides
+  const { data: ingredientRows } = await admin
+    .from("ingredient_guides")
+    .select("slug, updated_at");
+
+  const ingredientPages: MetadataRoute.Sitemap = (ingredientRows ?? []).map(
+    (i) => ({
+      url: `${SITE_URL}/en/ingredients/${i.slug}`,
+      lastModified: i.updated_at ?? undefined,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    })
+  );
+
+  // Topic pages — driven by trend query_text values.
+  // These are the keyword hubs (e.g. /topics/probiotics) that aggregate
+  // retailer listings, products, and related trends.
+  const { data: trendTopics } = await admin
+    .from("trend_topics")
+    .select("query_text, updated_at")
+    .eq("status", "published");
+
+  const uniqueTopics = new Set(
+    (trendTopics ?? []).map((t) => (t.query_text as string).toLowerCase().trim())
+  );
+  const topicPages: MetadataRoute.Sitemap = Array.from(uniqueTopics).map(
+    (keyword) => ({
+      url: `${SITE_URL}/en/topics/${encodeURIComponent(keyword.replace(/\s+/g, "-"))}`,
+      changeFrequency: "weekly" as const,
+      priority: 0.6,
+    })
+  );
+
+  return [
+    ...staticPages,
+    ...trendPages,
+    ...expertPages,
+    ...productPages,
+    ...safetyPages,
+    ...comparisonPages,
+    ...ingredientPages,
+    ...topicPages,
+  ];
 }

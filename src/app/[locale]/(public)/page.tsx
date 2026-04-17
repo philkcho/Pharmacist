@@ -8,13 +8,45 @@ import {
   FileText,
 } from "lucide-react";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
 import { HomeSearchBar } from "@/components/home/home-search-bar";
 
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
 
+export const metadata: Metadata = {
+  title: "Dr.pharmacist — Pharmacist-Reviewed Supplements, OTC & Skincare",
+  description:
+    "Real pharmacist analysis of trending supplements, OTC medications, and skincare. Backed by FDA data, PubMed research, and ingredient science. Is it worth the hype? We read the science so you don't have to.",
+  keywords: [
+    "pharmacist reviews",
+    "supplement analysis",
+    "OTC medication guide",
+    "skincare ingredients",
+    "is it safe",
+    "worth the hype",
+    "FDA reviewed",
+  ],
+  alternates: { canonical: `${SITE_URL}/en` },
+  openGraph: {
+    title: "Dr.pharmacist — Pharmacist-Reviewed Health & Beauty Analysis",
+    description:
+      "Real pharmacist analysis of trending products. FDA data + PubMed research + ingredient science. Find out what's worth the hype.",
+    url: `${SITE_URL}/en`,
+    type: "website",
+    siteName: "Dr.pharmacist",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Dr.pharmacist — Is It Worth the Hype?",
+    description:
+      "Pharmacist-reviewed supplements, OTC meds, and skincare. Science-backed answers.",
+  },
+};
 
 export default async function Home() {
   const [trends, expertPicks] = await Promise.all([

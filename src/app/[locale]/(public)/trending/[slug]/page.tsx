@@ -27,7 +27,7 @@ import type {
 } from "@/lib/ai/types";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArticleJsonLd } from "@/components/seo/json-ld";
+import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
 
 // ============================================================
 // Static params + metadata
@@ -168,6 +168,13 @@ export default async function TrendPage({ params }: TrendPageProps) {
         datePublished={topic.createdAt}
         dateModified={analysis.generatedAt}
         imageUrl={topic.imageUrl}
+      />
+      <BreadcrumbListJsonLd
+        items={[
+          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
+          { name: "Worth the Hype", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/trending` },
+          { name: synthesis?.headline ?? topic.queryText, url: articleUrl },
+        ]}
       />
       {/* ===== Hook — "Why you're seeing this" ===== */}
       <div className="mb-6 flex flex-wrap items-center gap-2">

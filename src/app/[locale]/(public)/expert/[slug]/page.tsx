@@ -14,7 +14,7 @@ import Link from "next/link";
 import { getExpertPickBySlug } from "@/lib/actions/expert-picks";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArticleJsonLd } from "@/components/seo/json-ld";
+import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
 
 interface ExpertDetailProps {
   params: Promise<{ slug: string }>;
@@ -84,6 +84,13 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
         url={expertUrl}
         datePublished={pick.publishedAt}
         dateModified={pick.createdAt}
+      />
+      <BreadcrumbListJsonLd
+        items={[
+          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
+          { name: "Dr.'s Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en/expert` },
+          { name: pick.title, url: expertUrl },
+        ]}
       />
       {/* Back link */}
       <Link

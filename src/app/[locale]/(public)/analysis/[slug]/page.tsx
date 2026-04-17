@@ -20,7 +20,7 @@ import Link from "next/link";
 import { getProductAnalysis, type IngredientDetail } from "@/lib/actions/analysis";
 import { StickyBuyBar } from "./sticky-buy-bar";
 import type { Metadata } from "next";
-import { ProductReviewJsonLd } from "@/components/seo/json-ld";
+import { ProductReviewJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
 
 interface AnalysisPageProps {
   params: Promise<{ slug: string; locale: string }>;
@@ -79,6 +79,13 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
         imageUrl={data.imageUrl}
         pros={data.pros}
         cons={data.cons}
+      />
+      <BreadcrumbListJsonLd
+        items={[
+          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
+          { name: "Product Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/en` },
+          { name: data.productName, url: analysisUrl },
+        ]}
       />
       <div className="mx-auto max-w-3xl px-4 pb-24 pt-8 sm:px-6">
         {/* Product Header */}
@@ -258,6 +265,21 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
                   </p>
                 </div>
               )}
+            </div>
+            <div className="mt-4 rounded-lg border-2 border-primary/20 bg-primary/5 p-4">
+              <p className="text-sm font-semibold">
+                Is {data.productName} safe for you?
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                See pregnancy, interactions, and common concerns answered in
+                our pharmacist safety FAQ.
+              </p>
+              <Link
+                href={`/is-safe/${slug}`}
+                className="mt-2 inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline"
+              >
+                Read safety review →
+              </Link>
             </div>
           </section>
         )}
