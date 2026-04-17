@@ -3,16 +3,20 @@ import { createAdminClient } from "@/lib/supabase/admin";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
 
+// Regenerate sitemap hourly so newly generated SEO pages (safety articles,
+// comparisons, ingredient guides) appear without a redeploy.
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const admin = createAdminClient();
 
   // Static pages
   const staticPages: MetadataRoute.Sitemap = [
-    { url: `${SITE_URL}/en`, changeFrequency: "daily", priority: 1.0 },
-    { url: `${SITE_URL}/en/about`, changeFrequency: "monthly", priority: 0.5 },
-    { url: `${SITE_URL}/en/trending`, changeFrequency: "daily", priority: 0.8 },
-    { url: `${SITE_URL}/en/expert`, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/en/search`, changeFrequency: "weekly", priority: 0.4 },
+    { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1.0 },
+    { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/trending`, changeFrequency: "daily", priority: 0.8 },
+    { url: `${SITE_URL}/expert`, changeFrequency: "weekly", priority: 0.8 },
+    { url: `${SITE_URL}/search`, changeFrequency: "weekly", priority: 0.4 },
   ];
 
   // Published trend articles
@@ -23,7 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .not("slug", "is", null);
 
   const trendPages: MetadataRoute.Sitemap = (trends ?? []).map((t) => ({
-    url: `${SITE_URL}/en/trending/${t.slug}`,
+    url: `${SITE_URL}/trending/${t.slug}`,
     lastModified: t.updated_at ?? undefined,
     changeFrequency: "weekly" as const,
     priority: 0.7,
@@ -36,7 +40,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .eq("status", "published");
 
   const expertPages: MetadataRoute.Sitemap = (experts ?? []).map((e) => ({
-    url: `${SITE_URL}/en/expert/${e.slug}`,
+    url: `${SITE_URL}/expert/${e.slug}`,
     lastModified: e.updated_at ?? undefined,
     changeFrequency: "weekly" as const,
     priority: 0.7,
@@ -50,7 +54,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     .not("verdict", "is", null);
 
   const productPages: MetadataRoute.Sitemap = (products ?? []).map((p) => ({
-    url: `${SITE_URL}/en/analysis/${p.slug}`,
+    url: `${SITE_URL}/analysis/${p.slug}`,
     lastModified: p.updated_at ?? undefined,
     changeFrequency: "monthly" as const,
     priority: 0.6,
@@ -59,7 +63,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // "Is X Safe?" SEO pages — one per approved product.
   // These target long-tail safety queries (pregnancy, alcohol, interactions).
   const safetyPages: MetadataRoute.Sitemap = (products ?? []).map((p) => ({
-    url: `${SITE_URL}/en/is-safe/${p.slug}`,
+    url: `${SITE_URL}/is-safe/${p.slug}`,
     lastModified: p.updated_at ?? undefined,
     changeFrequency: "monthly" as const,
     priority: 0.7, // slightly higher — higher search intent
@@ -72,7 +76,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const comparisonPages: MetadataRoute.Sitemap = (comparisons ?? []).map(
     (c) => ({
-      url: `${SITE_URL}/en/vs/${c.slug_a}-vs-${c.slug_b}`,
+      url: `${SITE_URL}/vs/${c.slug_a}-vs-${c.slug_b}`,
       lastModified: c.updated_at ?? undefined,
       changeFrequency: "monthly" as const,
       priority: 0.7,
@@ -86,7 +90,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   const ingredientPages: MetadataRoute.Sitemap = (ingredientRows ?? []).map(
     (i) => ({
-      url: `${SITE_URL}/en/ingredients/${i.slug}`,
+      url: `${SITE_URL}/ingredients/${i.slug}`,
       lastModified: i.updated_at ?? undefined,
       changeFrequency: "monthly" as const,
       priority: 0.7,
@@ -106,7 +110,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   );
   const topicPages: MetadataRoute.Sitemap = Array.from(uniqueTopics).map(
     (keyword) => ({
-      url: `${SITE_URL}/en/topics/${encodeURIComponent(keyword.replace(/\s+/g, "-"))}`,
+      url: `${SITE_URL}/topics/${encodeURIComponent(keyword.replace(/\s+/g, "-"))}`,
       changeFrequency: "weekly" as const,
       priority: 0.6,
     })
