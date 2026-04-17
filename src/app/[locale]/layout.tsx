@@ -57,6 +57,9 @@ export const metadata: Metadata = {
   alternates: {
     canonical: SITE_URL,
   },
+  verification: {
+    google: "3WA8CWhVp2X3YIMf-j8y-szdsEo-3Jds8TZcP-8Ae-Q",
+  },
 };
 
 export default async function LocaleLayout({
