@@ -3,7 +3,7 @@
 /**
  * Product comparison: get or generate "X vs Y" article.
  *
- * URL shape: /compare/[slug-a]-vs-[slug-b]
+ * URL shape: /vs/[slug-a]-vs-[slug-b]
  * Canonical: slugs sorted alphabetically so "a-vs-b" and "b-vs-a"
  * resolve to the same cached row (and the page redirects B-vs-A → A-vs-B).
  */
@@ -26,20 +26,7 @@ export interface ComparisonPageData {
 }
 
 /**
- * Parse a "[slug-a]-vs-[slug-b]" URL param into two slugs.
- * Returns null on malformed input.
- */
-export function parsePairSlug(
-  pair: string
-): { slugA: string; slugB: string } | null {
-  const parts = pair.split("-vs-");
-  if (parts.length !== 2 || !parts[0] || !parts[1]) return null;
-  return { slugA: parts[0], slugB: parts[1] };
-}
-
-/**
  * Sort two slugs alphabetically to produce the canonical pair key.
- * Returns [sorted-a, sorted-b, wasReordered].
  */
 function canonicalOrder(a: string, b: string): [string, string, boolean] {
   return a < b ? [a, b, false] : [b, a, true];
@@ -52,10 +39,12 @@ export async function getOrGenerateComparison(
   | { kind: "redirect"; to: string }
   | { kind: "not_found" }
 > {
-  const parsed = parsePairSlug(pairSlug);
-  if (!parsed) return { kind: "not_found" };
-
-  const { slugA: inputA, slugB: inputB } = parsed;
+  // Parse "[slug-a]-vs-[slug-b]"
+  const parts = pairSlug.split("-vs-");
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return { kind: "not_found" };
+  }
+  const [inputA, inputB] = parts;
 
   // Same product on both sides → bad URL
   if (inputA === inputB) return { kind: "not_found" };
@@ -66,7 +55,7 @@ export async function getOrGenerateComparison(
 
   // If the URL had slugs in the non-canonical order, redirect to canonical.
   if (wasReordered) {
-    return { kind: "redirect", to: `/compare/${canonicalPairSlug}` };
+    return { kind: "redirect", to: `/vs/${canonicalPairSlug}` };
   }
 
   const supabase = await createClient();

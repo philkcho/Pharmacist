@@ -36,7 +36,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { productA, productB, article } = result.data;
   const title = `${productA.name} vs ${productB.name} — Which Is Better? Pharmacist Review`;
   const description = article.hook.slice(0, 160);
-  const url = `${SITE_URL}/en/compare/${result.data.canonicalPairSlug}`;
+  const url = `${SITE_URL}/en/vs/${result.data.canonicalPairSlug}`;
 
   return {
     title,
@@ -66,7 +66,7 @@ export default async function ComparePage({ params }: Props) {
   if (result.kind === "not_found") notFound();
 
   const { productA, productB, article } = result.data;
-  const url = `${SITE_URL}/en/compare/${result.data.canonicalPairSlug}`;
+  const url = `${SITE_URL}/en/vs/${result.data.canonicalPairSlug}`;
 
   return (
     <article className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
