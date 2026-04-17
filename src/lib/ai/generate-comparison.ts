@@ -39,7 +39,7 @@ const ComparisonSchema = z.object({
         })
       )
       .min(1)
-      .max(6),
+      .max(10),
   }),
   sideBySide: z
     .array(
@@ -50,12 +50,12 @@ const ComparisonSchema = z.object({
       })
     )
     .min(2)
-    .max(8),
+    .max(12),
   prosCons: z.object({
-    productAPros: z.array(z.string()).min(1).max(5),
-    productACons: z.array(z.string()).max(4),
-    productBPros: z.array(z.string()).min(1).max(5),
-    productBCons: z.array(z.string()).max(4),
+    productAPros: z.array(z.string()).min(1).max(10),
+    productACons: z.array(z.string()).max(10),
+    productBPros: z.array(z.string()).min(1).max(10),
+    productBCons: z.array(z.string()).max(10),
   }),
   bottomLine: z
     .string()

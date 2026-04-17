@@ -32,14 +32,14 @@ const SafetyArticleSchema = z.object({
   whoShouldAvoid: z
     .array(z.string())
     .min(1)
-    .max(6)
+    .max(10)
     .describe(
       "Specific groups who should avoid or consult a doctor first. E.g. 'Pregnant or breastfeeding women', 'People on blood thinners'."
     ),
   commonSideEffects: z
     .array(z.string())
     .min(1)
-    .max(6)
+    .max(10)
     .describe(
       "Common side effects in plain language. Include rough frequency when known (e.g. 'Drowsiness — reported in ~1 in 10 users')."
     ),
@@ -52,7 +52,7 @@ const SafetyArticleSchema = z.object({
           .describe("One-sentence plain-language explanation of why."),
       })
     )
-    .max(6)
+    .max(10)
     .describe(
       "Key drug/supplement/food interactions. Return an empty array for topical cosmetics with no systemic interactions.",
     ),
@@ -70,7 +70,7 @@ const SafetyArticleSchema = z.object({
       })
     )
     .min(3)
-    .max(8)
+    .max(12)
     .describe(
       "Real consumer questions. For oral products include at least one of: pregnancy, long-term use, alcohol, overdose, children. For topical products cover pregnancy/breastfeeding, layering with other actives, and skin-type suitability."
     ),

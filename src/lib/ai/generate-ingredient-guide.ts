@@ -32,14 +32,14 @@ const IngredientGuideSchema = z.object({
       })
     )
     .min(1)
-    .max(8),
+    .max(12),
   howItWorks: z.string(),
   recommendedConcentration: z.string().optional(),
-  whoShouldUse: z.array(z.string()).min(1).max(6),
-  whoShouldAvoid: z.array(z.string()).max(6),
-  sideEffects: z.array(z.string()).max(6),
-  worksWellWith: z.array(z.string()).max(6),
-  avoidCombiningWith: z.array(z.string()).max(6),
+  whoShouldUse: z.array(z.string()).min(1).max(10),
+  whoShouldAvoid: z.array(z.string()).max(10),
+  sideEffects: z.array(z.string()).max(10),
+  worksWellWith: z.array(z.string()).max(10),
+  avoidCombiningWith: z.array(z.string()).max(10),
   faq: z
     .array(
       z.object({
@@ -48,7 +48,7 @@ const IngredientGuideSchema = z.object({
       })
     )
     .min(2)
-    .max(8),
+    .max(12),
   bottomLine: z.string(),
 });
 
