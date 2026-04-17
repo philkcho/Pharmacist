@@ -95,7 +95,7 @@ const expertVideoSchema = z.object({
       })
     )
     .describe(
-      "Branded PRODUCTS only — not standalone ingredients. Each entry must be an actual purchasable product with a brand name. Skip pure ingredient mentions (e.g. 'hyaluronic acid') unless tied to a specific product."
+      "Branded PRODUCTS only — not standalone ingredients. Each entry must be an actual product AVAILABLE ON AMAZON.COM or IHERB.COM with a brand name. Skip pure ingredient mentions (e.g. 'hyaluronic acid') unless tied to a specific product. Exclude local-only, prescription-only, or region-specific products not available to US online shoppers."
     ),
 });
 
@@ -168,7 +168,7 @@ CONTENT STYLE
 - Key Takeaways: 3-5 actionable bullets
 - Analysis Sections: long-form editorial; section titles are neutral research headings ("What the Research Shows", not "What the Expert Says")
 - Proper Notes: research-note format (heading + bullets)
-- Mentioned Products: ONLY branded, purchasable products (e.g. "Jarrow Dophilus EPS"). Do NOT list standalone ingredients ("retinol", "hyaluronic acid") unless tied to a specific branded product. Each entry is a factual one-liner with no geographic qualifiers.
+- Mentioned Products: ONLY branded, purchasable products that are AVAILABLE ON AMAZON.COM OR IHERB.COM (e.g. "Jarrow Dophilus EPS", "NOW Foods Vitamin D3"). Do NOT list standalone ingredients ("retinol", "hyaluronic acid") unless tied to a specific branded product. Do NOT include products that are only sold in local/regional stores, prescription-only medications, or products not available to US consumers online. Each entry is a factual one-liner with no geographic qualifiers.
 
 TRANSCRIPT:
 ${trimmed}`;

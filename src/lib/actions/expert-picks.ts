@@ -244,6 +244,7 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
     shopKeyword?: string;
     imageUrl?: string | null;
   }[] = [];
+  const supabase = await createAdminClient();
   for (const product of analysis.mentionedProducts) {
     try {
       const { ensureProductComplete } = await import("@/lib/actions/ensure-product-complete");
@@ -251,12 +252,31 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
         name: product.name,
         categorySlug: analysis.category,
       });
+
+      if (!ensured) {
+        console.log(`[expert-picks] Skipping "${product.name}" — ensureProductComplete returned null`);
+        continue;
+      }
+
+      // Only include products that have purchase links (Amazon/iHerb)
+      const { data: links } = await supabase
+        .from("product_purchase_links")
+        .select("id")
+        .eq("medication_id", ensured.id)
+        .eq("is_active", true)
+        .limit(1);
+
+      if (!links || links.length === 0) {
+        console.log(`[expert-picks] Skipping "${product.name}" — no purchase links (not on Amazon/iHerb)`);
+        continue;
+      }
+
       enrichedProducts.push({
         name: product.name,
-        slug: ensured?.slug,
+        slug: ensured.slug,
         reason: product.reason,
         shopKeyword: product.shopKeyword,
-        imageUrl: ensured?.imageUrl ?? null,
+        imageUrl: ensured.imageUrl ?? null,
       });
     } catch (err) {
       console.warn(
@@ -264,17 +284,15 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
         product.name,
         err instanceof Error ? err.message : err
       );
-      // Fall back to original product entry if enrichment fails
-      enrichedProducts.push({
-        name: product.name,
-        reason: product.reason,
-        shopKeyword: product.shopKeyword,
-      });
+      // Skip products that fail enrichment — no purchase link = no display
     }
   }
 
+  console.log(
+    `[expert-picks] ${analysis.mentionedProducts.length} products extracted → ${enrichedProducts.length} with purchase links`
+  );
+
   // 5. Save to DB
-  const supabase = await createAdminClient();
   const { data, error } = await supabase
     .from("expert_picks")
     .insert({
