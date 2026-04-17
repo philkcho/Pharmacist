@@ -118,6 +118,14 @@ Google Trends (주 1회, 월요일)
      └── 구매 링크 없으면 생성
   → 사용처: Expert Picks mentionedProducts, 모든 신규 제품 surface
   → 목적: 빈 카드/빈 분석 UI 제거 (고객에게 공백 화면 노출 방지)
+
+SEO 콘텐츠 자동 생성 (매일 12:00 UTC, /api/cron/seo-content)
+  → generateSeoContentBatch() — Gemini로 SEO 롱테일 페이지 자동 생성
+     ├── Safety × 3 — /is-safe/[slug] "Is X Safe?" Q&A
+     ├── Comparisons × 2 — /vs/[a]-vs-[b] 제품 비교 (같은 type 상위 6개 조합)
+     └── Ingredients × 2 — /ingredients/[slug] 성분 가이드
+  → 캐시: medications.safety_article_jsonb + product_comparisons + ingredient_guides
+  → 월간 약 210 페이지 자동 생성 → 구글 인덱싱 가능 자산 확대
 ```
 
 ### 제품 이미지 정책
