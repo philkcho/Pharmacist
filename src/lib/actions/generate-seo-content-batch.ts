@@ -86,19 +86,46 @@ function canonicalOrder(a: string, b: string): [string, string] {
   return a < b ? [a, b] : [b, a];
 }
 
+function genericKey(generic: string | null | undefined): string | null {
+  if (!generic) return null;
+  const first = generic
+    .toLowerCase()
+    .split(/[/,;()]|\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)[0];
+  return first && first.length >= 3 ? first : null;
+}
+
 async function batchComparisons(
   limit: number
 ): Promise<SeoBatchResult["comparisons"]> {
   const admin = createAdminClient();
   const result = { processed: 0, succeeded: 0, failed: [] as string[] };
 
-  // Strategy: for each product_type, take top 6 scoring products.
-  // Within each type, pick the top pair not yet generated.
-  const types: Array<"otc_drug" | "supplement" | "cosmetic" | "quasi_drug"> = [
-    "otc_drug",
-    "supplement",
-    "cosmetic",
-  ];
+  // Strategy: cluster approved products by (product_type, normalized generic_name).
+  // Only pair products within the same cluster — this guarantees they share
+  // a therapeutic class or active ingredient, which is the foundation for a
+  // meaningful "X vs Y" comparison. Pairs across clusters (e.g. heartburn
+  // med vs eye-allergy drop) fail Gemini schema validation because the model
+  // can't invent shared use-cases that don't exist.
+  const { data: all } = await admin
+    .from("medications")
+    .select(
+      "id, name, slug, generic_name, product_type, active_ingredients, verdict, pros, cons, price_range, comparison_score"
+    )
+    .eq("approval_status", "approved")
+    .not("verdict", "is", null)
+    .not("generic_name", "is", null);
+
+  const clusters = new Map<string, Array<Record<string, unknown>>>();
+  for (const p of all ?? []) {
+    const key = genericKey(p.generic_name as string);
+    if (!key) continue;
+    const clusterKey = `${p.product_type}::${key}`;
+    const bucket = clusters.get(clusterKey) ?? [];
+    bucket.push(p);
+    clusters.set(clusterKey, bucket);
+  }
 
   const candidatePairs: Array<{
     typeLabel: string;
@@ -106,26 +133,26 @@ async function batchComparisons(
     pB: Record<string, unknown>;
   }> = [];
 
-  for (const type of types) {
-    const { data: top } = await admin
-      .from("medications")
-      .select(
-        "id, name, slug, generic_name, product_type, active_ingredients, verdict, pros, cons, price_range, comparison_score"
-      )
-      .eq("approval_status", "approved")
-      .eq("product_type", type)
-      .not("verdict", "is", null)
-      .order("comparison_score", { ascending: false, nullsFirst: false })
-      .limit(6);
+  // Rank clusters by size desc, then by top product's comparison_score desc.
+  // Within each cluster, sort by comparison_score desc and generate all pairs.
+  const rankedClusters = Array.from(clusters.entries())
+    .filter(([, v]) => v.length >= 2)
+    .map(([key, members]) => {
+      const sorted = [...members].sort(
+        (a, b) =>
+          Number(b.comparison_score ?? 0) - Number(a.comparison_score ?? 0)
+      );
+      return { key, members: sorted };
+    })
+    .sort((a, b) => b.members.length - a.members.length);
 
-    const pool = top ?? [];
-    // Generate all pairs within this type
-    for (let i = 0; i < pool.length; i++) {
-      for (let j = i + 1; j < pool.length; j++) {
+  for (const { key, members } of rankedClusters) {
+    for (let i = 0; i < members.length; i++) {
+      for (let j = i + 1; j < members.length; j++) {
         candidatePairs.push({
-          typeLabel: type,
-          pA: pool[i],
-          pB: pool[j],
+          typeLabel: key,
+          pA: members[i],
+          pB: members[j],
         });
       }
     }

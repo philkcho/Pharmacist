@@ -52,9 +52,10 @@ const SafetyArticleSchema = z.object({
           .describe("One-sentence plain-language explanation of why."),
       })
     )
-    .min(1)
     .max(6)
-    .describe("Key drug/supplement/food interactions to watch for."),
+    .describe(
+      "Key drug/supplement/food interactions. Return an empty array for topical cosmetics with no systemic interactions.",
+    ),
   faq: z
     .array(
       z.object({
@@ -68,10 +69,10 @@ const SafetyArticleSchema = z.object({
           .describe("Direct 2-3 sentence answer, no hedging."),
       })
     )
-    .min(4)
+    .min(3)
     .max(8)
     .describe(
-      "Real consumer questions. MUST include at least one of: pregnancy, long-term use, alcohol, overdose, children."
+      "Real consumer questions. For oral products include at least one of: pregnancy, long-term use, alcohol, overdose, children. For topical products cover pregnancy/breastfeeding, layering with other actives, and skin-type suitability."
     ),
   bottomLine: z
     .string()
@@ -124,7 +125,8 @@ Write a "Is ${input.productName} Safe?" Q&A article. Rules:
 3. **FDA-backed when relevant.** If FDA data is provided, weight those warnings appropriately.
 4. **US audience.** No overseas/foreign framing. No K-beauty unless relevant.
 5. **Real search queries.** FAQ questions should match how people actually Google — not how textbooks phrase them.
-6. **Cover the big 5.** FAQ must address at least one of: pregnancy/breastfeeding, long-term daily use, alcohol, overdose/too-much, children/age limits.
+6. **FAQ coverage.** Oral products: include at least one of pregnancy/breastfeeding, long-term daily use, alcohol, overdose, or children. Topical cosmetics: cover pregnancy safety, layering with other actives (retinol/AHA/BHA/vitamin C), and skin-type suitability.
+   **Interactions.** Oral products: include relevant drug/food interactions. Topical cosmetics with no systemic absorption: it's fine to return an empty interactions array.
 7. **No fearmongering or hype.** Calibrate confidence to evidence.
 8. **Practical bottom line.** End with what a normal person should actually do.
 
