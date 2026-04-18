@@ -16,7 +16,6 @@ import {
 import Link from "next/link";
 import {
   getTrendBySlug,
-  getPublishedTrendSlugs,
   type TrendPageData,
 } from "@/lib/actions/trends";
 import type {
@@ -30,13 +29,13 @@ import type { Metadata } from "next";
 import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
 
 // ============================================================
-// Static params + metadata
+// Metadata
 // ============================================================
-
-export async function generateStaticParams() {
-  const slugs = await getPublishedTrendSlugs();
-  return slugs.map((slug) => ({ slug }));
-}
+//
+// Note: no generateStaticParams — page is dynamically rendered.
+// getTrendBySlug uses cookies-backed Supabase client which can't
+// run during static prerender, and other /[slug] pages (is-safe,
+// ingredients, vs, expert, analysis) follow the same pattern.
 
 interface TrendPageProps {
   params: Promise<{ slug: string; locale: string }>;
