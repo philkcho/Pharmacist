@@ -3,6 +3,8 @@
  * Renders <script type="application/ld+json"> in the page head.
  */
 
+import { SITE_AUTHOR, authorPersonSchema } from "@/lib/author";
+
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
 
 // ── Organization (site-wide) ────────────────────────────────
@@ -42,6 +44,7 @@ export function ArticleJsonLd({
   dateModified?: string | null;
   imageUrl?: string | null;
 }) {
+  const person = authorPersonSchema();
   const data: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Article",
@@ -53,14 +56,15 @@ export function ArticleJsonLd({
       name: "Dr.pharmacist",
       url: SITE_URL,
     },
-    author: {
-      "@type": "Organization",
-      name: "Dr.pharmacist",
-    },
+    author: person,
+    reviewedBy: person,
   };
 
   if (datePublished) data.datePublished = datePublished;
-  if (dateModified) data.dateModified = dateModified;
+  if (dateModified) {
+    data.dateModified = dateModified;
+    data.lastReviewed = dateModified;
+  }
   if (imageUrl) data.image = imageUrl;
 
   return (
@@ -132,9 +136,11 @@ export function ProductReviewJsonLd({
   if (rating) {
     data.review = {
       "@type": "Review",
-      author: {
+      author: authorPersonSchema(),
+      publisher: {
         "@type": "Organization",
         name: "Dr.pharmacist",
+        url: SITE_URL,
       },
       reviewRating: {
         "@type": "Rating",
