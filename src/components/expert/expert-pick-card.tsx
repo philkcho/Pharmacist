@@ -1,7 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
-import { Pill } from "lucide-react";
 import { DrCover } from "./dr-cover";
 import { AuthorAvatar } from "./author-avatar";
 import { SITE_AUTHOR } from "@/lib/author";
@@ -63,14 +62,6 @@ export function ExpertPickCard({
         <h3 className="line-clamp-3 font-semibold leading-snug group-hover:text-primary">
           {title}
         </h3>
-      </div>
-
-      {/* Brand strip */}
-      <div className="mt-auto flex items-center justify-center gap-1.5 border-t bg-primary/5 px-3 py-2">
-        <Pill className="h-3.5 w-3.5 text-primary" />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Dr.&apos;s Analysis
-        </span>
       </div>
     </Link>
   );
