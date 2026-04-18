@@ -17,6 +17,7 @@ import {
   BreadcrumbListJsonLd,
   ArticleJsonLd,
 } from "@/components/seo/json-ld";
+import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
@@ -88,6 +89,7 @@ export default async function IngredientGuidePage({ params }: Props) {
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           What is {name}?
         </h1>
+        <ReviewerByline lastReviewedAt={data.generatedAt} className="mt-3" />
       </header>
 
       {/* Hook */}

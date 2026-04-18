@@ -17,6 +17,7 @@ import {
   BreadcrumbListJsonLd,
   ArticleJsonLd,
 } from "@/components/seo/json-ld";
+import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
@@ -120,6 +121,8 @@ export default async function IsSafePage({ params }: Props) {
           )}
         </div>
       </header>
+
+      <ReviewerByline lastReviewedAt={data.generatedAt} className="mb-6" />
 
       {/* Hook Answer */}
       <section className="mb-8 rounded-lg border-l-4 border-primary bg-muted/30 p-5">

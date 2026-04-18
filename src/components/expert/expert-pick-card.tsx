@@ -2,7 +2,6 @@ import Link from "next/link";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import { DrCover } from "./dr-cover";
-import { AuthorAvatar } from "./author-avatar";
 import { SITE_AUTHOR } from "@/lib/author";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -45,12 +44,9 @@ export function ExpertPickCard({
           <DrCover category={category} />
         )}
 
-        {/* Author avatar — bottom-right overlay, signals E-E-A-T */}
-        <div className="absolute bottom-2 right-2 flex items-center gap-1.5 rounded-full bg-background/90 py-1 pl-1 pr-2.5 shadow-sm backdrop-blur">
-          <AuthorAvatar size={24} ringClassName="" />
-          <span className="text-[10px] font-medium leading-none text-foreground">
-            {SITE_AUTHOR.shortCredit}
-          </span>
+        {/* Reviewer credit overlay — small, text-only, no photo */}
+        <div className="absolute bottom-2 right-2 rounded-full bg-background/90 px-2.5 py-1 text-[10px] font-medium leading-none text-foreground shadow-sm backdrop-blur">
+          Reviewed by {SITE_AUTHOR.name}
         </div>
       </div>
 

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { Pill } from "lucide-react";
+import { SITE_AUTHOR } from "@/lib/author";
 
 export function Footer() {
   const t = useTranslations();
@@ -15,7 +16,14 @@ export function Footer() {
           <p className="mt-1 leading-relaxed">{t("footer.disclaimer")}</p>
         </div>
 
-        <div className="mt-8 flex flex-col items-center justify-between gap-4 sm:flex-row">
+        <div className="mt-6 text-center text-sm text-muted-foreground">
+          Medically reviewed by{" "}
+          <Link href="/about" className="text-foreground hover:underline">
+            {SITE_AUTHOR.name}
+          </Link>
+        </div>
+
+        <div className="mt-6 flex flex-col items-center justify-between gap-4 sm:flex-row">
           <div className="flex items-center gap-2">
             <Pill className="h-4 w-4 text-muted-foreground" />
             <span className="text-sm text-muted-foreground">

@@ -1,7 +1,6 @@
 import { Pill, FlaskConical, ShieldCheck, BookOpen, Mail, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { AuthorAvatar } from "@/components/expert/author-avatar";
 import { SITE_AUTHOR, authorPersonSchema } from "@/lib/author";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
@@ -66,31 +65,23 @@ export default function AboutPage() {
       {/* Meet the Reviewer — E-E-A-T anchor for health (YMYL) content */}
       <section className="mt-12 rounded-xl border bg-muted/20 p-6 sm:p-8">
         <h2 className="text-xl font-semibold">Meet Your Pharmacist Reviewer</h2>
-        <div className="mt-5 flex flex-col gap-5 sm:flex-row sm:items-center">
-          <AuthorAvatar size={96} ringClassName="ring-4 ring-background" />
-          <div className="flex-1">
-            <div className="flex flex-wrap items-baseline gap-x-2">
-              <h3 className="text-lg font-semibold">{SITE_AUTHOR.name}</h3>
-              <span className="text-sm text-muted-foreground">
-                {SITE_AUTHOR.jobTitle}
-              </span>
-            </div>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              Every article and product analysis on Dr.pharmacist is reviewed
-              for accuracy against FDA labeling, peer-reviewed literature, and
-              current pharmacy practice. AI-assisted drafts are not published
-              without this review step.
-            </p>
-            <a
-              href={SITE_AUTHOR.linkedinUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
-            >
-              LinkedIn profile
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
-          </div>
+        <div className="mt-5">
+          <h3 className="text-lg font-semibold">{SITE_AUTHOR.name}</h3>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+            Every article and product analysis on Dr.pharmacist is reviewed for
+            accuracy against FDA labeling, peer-reviewed literature, and current
+            pharmacy practice. AI-assisted drafts are not published without this
+            review step.
+          </p>
+          <a
+            href={SITE_AUTHOR.linkedinUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+          >
+            Connect on LinkedIn
+            <ExternalLink className="h-3.5 w-3.5" />
+          </a>
         </div>
       </section>
 

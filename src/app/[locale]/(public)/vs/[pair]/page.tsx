@@ -17,6 +17,7 @@ import {
   BreadcrumbListJsonLd,
   ArticleJsonLd,
 } from "@/components/seo/json-ld";
+import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
@@ -95,6 +96,10 @@ export default async function ComparePage({ params }: Props) {
           {productA.name} <span className="text-muted-foreground">vs</span>{" "}
           {productB.name}
         </h1>
+        <ReviewerByline
+          lastReviewedAt={result.data.generatedAt}
+          className="mt-3"
+        />
       </header>
 
       {/* Product cards side-by-side */}

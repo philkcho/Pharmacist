@@ -21,6 +21,7 @@ import { getProductAnalysis, type IngredientDetail } from "@/lib/actions/analysi
 import { StickyBuyBar } from "./sticky-buy-bar";
 import type { Metadata } from "next";
 import { ProductReviewJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
+import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 interface AnalysisPageProps {
   params: Promise<{ slug: string; locale: string }>;
@@ -143,6 +144,8 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
             </div>
           </div>
         </div>
+
+        <ReviewerByline className="mt-4" />
 
         {/* Verdict */}
         {data.verdict && (

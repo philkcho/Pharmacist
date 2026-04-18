@@ -27,6 +27,7 @@ import type {
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
+import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 // ============================================================
 // Metadata
@@ -196,6 +197,11 @@ export default async function TrendPage({ params }: TrendPageProps) {
       <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
         {synthesis?.headline ?? topic.queryText}
       </h1>
+
+      <ReviewerByline
+        lastReviewedAt={analysis.generatedAt}
+        className="mt-3"
+      />
 
       {/* Trend drivers */}
       {synthesis != null && synthesis.trendDrivers.length > 0 && (

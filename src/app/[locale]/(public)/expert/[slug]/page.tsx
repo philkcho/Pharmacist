@@ -15,6 +15,7 @@ import { getExpertPickBySlug } from "@/lib/actions/expert-picks";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
+import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 interface ExpertDetailProps {
   params: Promise<{ slug: string }>;
@@ -116,6 +117,11 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
             <span className="text-xs">~{readMinutes} min read</span>
           </div>
         </div>
+
+        <ReviewerByline
+          lastReviewedAt={pick.publishedAt ?? pick.createdAt}
+          className="mt-3"
+        />
       </header>
 
 
