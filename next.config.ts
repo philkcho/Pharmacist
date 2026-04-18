@@ -4,7 +4,13 @@ import createNextIntlPlugin from "next-intl/plugin";
 const withNextIntl = createNextIntlPlugin();
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "image.pollinations.ai" },
+      { protocol: "https", hostname: "i.ytimg.com" },
+      { protocol: "https", hostname: "rlemyrdivdwibooxbugq.supabase.co" },
+    ],
+  },
 };
 
 export default withNextIntl(nextConfig);

@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
 import { HomeSearchBar } from "@/components/home/home-search-bar";
+import { ExpertPickCard } from "@/components/expert/expert-pick-card";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
 
@@ -96,38 +97,15 @@ export default async function Home() {
 
           {expertPicks.length > 0 ? (
             <div className="mt-6 grid gap-4 sm:grid-cols-3">
-              {expertPicks.map((pick) => {
-                const categoryLabel =
-                  pick.category === "health"
-                    ? "Health"
-                    : pick.category === "skin-care"
-                      ? "Skin Care"
-                      : "Wellness";
-                return (
-                  <Link
-                    key={pick.slug}
-                    href={`/expert/${pick.slug}`}
-                    className="group flex flex-col overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md"
-                  >
-                    {/* Info — title prominent on top */}
-                    <div className="p-4">
-                      <Badge variant="secondary" className="mb-2 text-xs">
-                        {categoryLabel}
-                      </Badge>
-                      <h3 className="line-clamp-3 font-semibold leading-snug group-hover:text-primary">
-                        {pick.title}
-                      </h3>
-                    </div>
-                    {/* Compact Dr.pharmacist brand strip */}
-                    <div className="mt-auto flex items-center justify-center gap-1.5 border-t bg-primary/5 px-3 py-2">
-                      <Pill className="h-3.5 w-3.5 text-primary" />
-                      <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-                        Dr.&apos;s Analysis
-                      </span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {expertPicks.map((pick) => (
+                <ExpertPickCard
+                  key={pick.slug}
+                  slug={pick.slug}
+                  title={pick.title}
+                  category={pick.category}
+                  thumbnailUrl={pick.thumbnailUrl}
+                />
+              ))}
             </div>
           ) : (
             <div className="mt-6 rounded-lg border border-dashed p-8 text-center text-muted-foreground">

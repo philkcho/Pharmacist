@@ -1,7 +1,7 @@
-import { Badge } from "@/components/ui/badge";
-import { FileText, ArrowLeft, Pill } from "lucide-react";
+import { FileText, ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
+import { ExpertPickCard } from "@/components/expert/expert-pick-card";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -12,8 +12,6 @@ export const metadata: Metadata = {
 
 export default async function ExpertIndexPage() {
   const picks = await listPublishedExpertPicks(50);
-
-  const categories = ["all", "health", "skin-care", "wellness"] as const;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
@@ -48,47 +46,16 @@ export default async function ExpertIndexPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {picks.map((pick) => (
-            <ExpertPickCard key={pick.id} pick={pick} />
+            <ExpertPickCard
+              key={pick.id}
+              slug={pick.slug}
+              title={pick.title}
+              category={pick.category}
+              thumbnailUrl={pick.thumbnailUrl}
+            />
           ))}
         </div>
       )}
     </div>
-  );
-}
-
-function ExpertPickCard({
-  pick,
-}: {
-  pick: Awaited<ReturnType<typeof listPublishedExpertPicks>>[number];
-}) {
-  const categoryLabel =
-    pick.category === "health"
-      ? "Health"
-      : pick.category === "skin-care"
-        ? "Skin Care"
-        : "Wellness";
-
-  return (
-    <Link
-      href={`/expert/${pick.slug}`}
-      className="group flex flex-col overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md"
-    >
-      {/* Info — title prominent on top */}
-      <div className="p-4">
-        <Badge variant="secondary" className="mb-2 text-xs">
-          {categoryLabel}
-        </Badge>
-        <h3 className="line-clamp-3 font-semibold leading-snug group-hover:text-primary">
-          {pick.title}
-        </h3>
-      </div>
-      {/* Compact Dr.pharmacist brand strip */}
-      <div className="mt-auto flex items-center justify-center gap-1.5 border-t bg-primary/5 px-3 py-2">
-        <Pill className="h-3.5 w-3.5 text-primary" />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-          Dr.&apos;s Analysis
-        </span>
-      </div>
-    </Link>
   );
 }
