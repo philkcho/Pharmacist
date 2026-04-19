@@ -18,6 +18,10 @@
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
+import {
+  fetchArticleReferences,
+  type ArticleReference,
+} from "@/lib/references/fetch-references";
 
 // ── Zod Schema ──────────────────────────────────────────────
 
@@ -52,7 +56,13 @@ const IngredientGuideSchema = z.object({
   bottomLine: z.string(),
 });
 
-export type IngredientGuide = z.infer<typeof IngredientGuideSchema>;
+type IngredientGuideAiOutput = z.infer<typeof IngredientGuideSchema>;
+
+// AI output + retrieved references. `references` is optional so cached
+// guides generated before this feature landed still satisfy the type.
+export type IngredientGuide = IngredientGuideAiOutput & {
+  references?: ArticleReference[];
+};
 
 // ── Input ───────────────────────────────────────────────────
 
@@ -65,6 +75,19 @@ export interface GenerateIngredientGuideInput {
 }
 
 // ── Main ────────────────────────────────────────────────────
+
+export async function fetchIngredientReferences(
+  input: GenerateIngredientGuideInput
+): Promise<ArticleReference[]> {
+  // For ingredient guides the name IS the primary search term — no
+  // fallbacks needed. FDA lookup uses the same term; only OTC-drug
+  // ingredients (ibuprofen, acetaminophen, etc.) will match a label.
+  return fetchArticleReferences({
+    primaryTerm: input.name,
+    drugTerms: [input.name],
+    limit: 6,
+  });
+}
 
 export async function generateIngredientGuide(
   input: GenerateIngredientGuideInput
@@ -86,14 +109,19 @@ Write a "What is ${input.name}?" guide. Rules:
 
 Generate all fields. Omit recommendedConcentration only if it genuinely doesn't apply.`;
 
+  const referencesPromise = fetchIngredientReferences(input);
+
   try {
-    const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
-      schema: IngredientGuideSchema,
-      prompt,
-      temperature: 0.4,
-    });
-    return object;
+    const [{ object }, references] = await Promise.all([
+      generateObject({
+        model: google("gemini-2.5-flash"),
+        schema: IngredientGuideSchema,
+        prompt,
+        temperature: 0.4,
+      }),
+      referencesPromise,
+    ]);
+    return { ...object, references };
   } catch (err) {
     const detail = summarizeAiError(err);
     console.error(

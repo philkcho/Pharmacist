@@ -20,23 +20,17 @@
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
-import { searchPubmed } from "@/lib/retrieval/search-pubmed";
-import { fetchFdaFacts } from "@/lib/retrieval/fetch-fda-facts";
-import { emptyEntities, type SourceFragment } from "@/lib/ai/types";
+import {
+  fetchArticleReferences,
+  extractLikelyIngredient,
+  type ArticleReference,
+} from "@/lib/references/fetch-references";
 
 // ── Zod Schema ──────────────────────────────────────────────
 
-// Public-shaped citation persisted alongside the article. We store the
-// retrieved SourceFragment subset that actually renders on the page —
-// avoids leaking the full retrieval metadata into JSONB and keeps the
-// type stable across future retriever refactors.
-export interface SafetyReference {
-  title: string;
-  url: string;
-  kind: "pubmed" | "fda";
-  citation?: string;
-  year?: string;
-}
+// Re-export under the article-specific name for backward compatibility
+// with existing callers and typed JSONB shapes in the DB.
+export type SafetyReference = ArticleReference;
 
 const SafetyArticleSchema = z.object({
   hookAnswer: z
@@ -184,14 +178,10 @@ Generate all fields of the structured output.`;
 
 // ── References ─────────────────────────────────────────────
 //
-// Fetches Tier 1 (FDA DailyMed) + Tier 2 (PubMed reviews) sources in
-// parallel. FDA is only available for OTC drug labels — supplement/
-// cosmetic products return 0 FDA fragments and fall back to PubMed
-// alone. PubMed uses progressively simpler queries (generic name →
-// heuristic keyword) because the review-article filter is strict.
-//
-// Exported so `scripts/backfill-safety-references.mjs` can re-use the
-// exact same retrieval behavior when updating existing cached articles.
+// Thin wrapper over the shared `fetchArticleReferences` — packages the
+// product-shaped input into generic primary/fallback/drug terms. Kept
+// as a named export so the backfill script can call the exact same
+// code path as the live generation flow.
 
 export async function fetchSafetyReferences(
   input: GenerateSafetyInput
@@ -203,197 +193,28 @@ export async function fetchSafetyReferences(
 
   const extracted = extractLikelyIngredient(input.productName);
 
-  const [pubmedRefs, fdaRefs] = await Promise.all([
-    fetchPubmedRefs(input.productName, generics, extracted),
-    fetchFdaRefs(input.productName, generics, extracted),
-  ]);
-
-  // FDA first — Tier 1 authority weighs more on YMYL pages than PubMed
-  // reviews, and we want it to be the first thing a reader sees.
-  return [...fdaRefs, ...pubmedRefs].slice(0, 6);
-}
-
-async function fetchPubmedRefs(
-  productName: string,
-  generics: string[],
-  extracted: string | null
-): Promise<SafetyReference[]> {
-  const candidates: Array<{
-    query: string;
-    entities: ReturnType<typeof emptyEntities>;
-  }> = [];
-
-  if (generics.length > 0) {
-    candidates.push({
-      query: generics[0],
-      entities: { ...emptyEntities(), genericIngredients: generics },
-    });
-  }
-
-  if (extracted && !generics.includes(extracted)) {
-    candidates.push({
-      query: extracted,
-      entities: { ...emptyEntities(), genericIngredients: [extracted] },
-    });
-  }
-
-  for (const c of candidates) {
-    try {
-      const { fragments } = await searchPubmed({ ...c, limit: 6 });
-      if (fragments.length > 0) {
-        return fragments.slice(0, 5).map(fragmentToReference);
-      }
-    } catch (err) {
-      console.warn(
-        "[safety-article] PubMed fetch failed:",
-        err instanceof Error ? err.message : err
-      );
-    }
-  }
-  void productName; // productName currently unused as a last-ditch fallback
-  return [];
-}
-
-async function fetchFdaRefs(
-  productName: string,
-  generics: string[],
-  extracted: string | null
-): Promise<SafetyReference[]> {
-  // Dedup terms across all sources we know about for this product.
-  // fetchFdaFacts caps at 5 lookups internally, so over-provisioning
-  // the list is harmless — it'll pick the first 5 unique.
+  const primaryTerm = generics[0] ?? extracted ?? input.productName;
+  const fallbackTerms = Array.from(
+    new Set(
+      [...generics.slice(1), ...(extracted ? [extracted] : [])].filter(
+        (t) => t !== primaryTerm
+      )
+    )
+  );
   const drugTerms = Array.from(
     new Set(
-      [
-        productName,
-        ...generics,
-        extracted,
-      ].filter((v): v is string => !!v && v.length > 0)
+      [input.productName, ...generics, ...(extracted ? [extracted] : [])].filter(
+        (v): v is string => !!v && v.length > 0
+      )
     )
   );
 
-  if (drugTerms.length === 0) return [];
-
-  try {
-    const { fragments } = await fetchFdaFacts({
-      query: drugTerms[0],
-      entities: {
-        ...emptyEntities(),
-        drugs: [productName],
-        genericIngredients: [
-          ...generics,
-          ...(extracted ? [extracted] : []),
-        ],
-      },
-      limit: 6,
-    });
-
-    // fetchFdaFacts returns multiple fragments per label (one per
-    // section: Warnings, Dosing, Indications…). Collapse to one
-    // reference per DailyMed URL, keeping the highest-relevance
-    // fragment (Warnings scores 90).
-    const bestByUrl = new Map<string, SourceFragment>();
-    for (const frag of fragments) {
-      const existing = bestByUrl.get(frag.url);
-      if (!existing || frag.relevanceScore > existing.relevanceScore) {
-        bestByUrl.set(frag.url, frag);
-      }
-    }
-
-    return Array.from(bestByUrl.values())
-      .map((f) => ({
-        title: cleanFdaTitle(f),
-        url: f.url,
-        kind: "fda" as const,
-        citation: f.citation,
-        year: f.publishedAt,
-      }))
-      .slice(0, 2); // at most 2 FDA refs per product
-  } catch (err) {
-    console.warn(
-      "[safety-article] FDA fetch failed:",
-      err instanceof Error ? err.message : err
-    );
-    return [];
-  }
-}
-
-// fetchFdaFacts titles fragments per-section ("FDA Warnings — Tylenol").
-// The References UI shows one line per source, so strip the section
-// prefix and present the label as a single entity.
-function cleanFdaTitle(f: SourceFragment): string {
-  const match = f.title.match(/FDA\s[^—]+—\s*(.+)$/);
-  const subject = match ? match[1].trim() : f.title;
-  return `FDA Drug Label — ${subject}`;
-}
-
-// Lightweight ingredient-name guesser for products without structured
-// genericName or activeIngredients. Covers the ~30 most common OTC /
-// supplement ingredients we stock — good enough for PubMed search
-// fallback without adding an LLM call.
-const COMMON_INGREDIENT_TERMS = [
-  "vitamin c",
-  "vitamin d",
-  "vitamin e",
-  "vitamin k",
-  "vitamin b12",
-  "vitamin a",
-  "omega-3",
-  "fish oil",
-  "probiotics",
-  "melatonin",
-  "magnesium",
-  "zinc",
-  "iron",
-  "calcium",
-  "biotin",
-  "collagen",
-  "glucosamine",
-  "turmeric",
-  "curcumin",
-  "ashwagandha",
-  "ginseng",
-  "coq10",
-  "niacinamide",
-  "hyaluronic acid",
-  "retinol",
-  "retinoid",
-  "salicylic acid",
-  "glycolic acid",
-  "azelaic acid",
-  "benzoyl peroxide",
-  "acetaminophen",
-  "ibuprofen",
-  "naproxen",
-  "aspirin",
-  "diphenhydramine",
-  "loratadine",
-  "cetirizine",
-  "famotidine",
-  "omeprazole",
-  "melatonin",
-  "creatine",
-  "ashwagandha",
-  "spermidine",
-];
-
-function extractLikelyIngredient(name: string): string | null {
-  const lower = name.toLowerCase();
-  for (const term of COMMON_INGREDIENT_TERMS) {
-    if (lower.includes(term)) return term;
-  }
-  return null;
-}
-
-function fragmentToReference(f: SourceFragment): SafetyReference {
-  const isFda = f.sourceType.startsWith("fda_");
-  return {
-    title: f.title,
-    url: f.url,
-    kind: isFda ? "fda" : "pubmed",
-    citation: f.citation,
-    year: f.publishedAt,
-  };
+  return fetchArticleReferences({
+    primaryTerm,
+    fallbackTerms,
+    drugTerms,
+    limit: 6,
+  });
 }
 
 function summarizeAiError(err: unknown): string {

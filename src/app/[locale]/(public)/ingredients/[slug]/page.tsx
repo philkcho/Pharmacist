@@ -17,6 +17,7 @@ import {
   BreadcrumbListJsonLd,
   ArticleJsonLd,
 } from "@/components/seo/json-ld";
+import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 const SITE_URL =
@@ -240,6 +241,8 @@ export default async function IngredientGuidePage({ params }: Props) {
         </h2>
         <p className="text-base leading-relaxed">{article.bottomLine}</p>
       </section>
+
+      <ReferencesSection references={article.references} />
 
       {/* Products containing this ingredient */}
       {foundInProducts.length > 0 && (

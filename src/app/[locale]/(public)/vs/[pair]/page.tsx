@@ -17,6 +17,7 @@ import {
   BreadcrumbListJsonLd,
   ArticleJsonLd,
 } from "@/components/seo/json-ld";
+import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 const SITE_URL =
@@ -198,6 +199,8 @@ export default async function ComparePage({ params }: Props) {
         </h2>
         <p className="text-base leading-relaxed">{article.bottomLine}</p>
       </section>
+
+      <ReferencesSection references={article.references} />
 
       {/* CTA */}
       <div className="mt-12 grid gap-3 sm:grid-cols-2">

@@ -9,9 +9,8 @@ import {
   ArrowRight,
   XCircle,
   Pill,
-  BookOpen,
-  ExternalLink,
 } from "lucide-react";
+import { ReferencesSection } from "@/components/seo/references-section";
 import { getOrGenerateSafetyArticle } from "@/lib/actions/safety-articles";
 import { Badge } from "@/components/ui/badge";
 import { ProductImage } from "@/components/ui/product-image";
@@ -208,46 +207,7 @@ export default async function IsSafePage({ params }: Props) {
         <p className="text-base leading-relaxed">{article.bottomLine}</p>
       </section>
 
-      {/* References — real PubMed / FDA sources fetched at generation time.
-          Only renders for articles generated after the citation feature
-          landed; older cached entries have no `references` field. */}
-      {article.references && article.references.length > 0 && (
-        <section className="mb-8">
-          <h2 className="mb-3 flex items-center gap-2 text-xl font-bold">
-            <BookOpen className="h-5 w-5 text-primary" />
-            References
-          </h2>
-          <ol className="space-y-3 text-sm">
-            {article.references.map((ref, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="font-semibold text-muted-foreground">
-                  {i + 1}.
-                </span>
-                <div className="flex-1">
-                  <a
-                    href={ref.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-start gap-1 font-medium text-foreground hover:text-primary hover:underline"
-                  >
-                    {ref.title}
-                    <ExternalLink className="mt-0.5 h-3 w-3 shrink-0 text-muted-foreground" />
-                  </a>
-                  {ref.citation && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {ref.citation}
-                      {" · "}
-                      <span className="uppercase tracking-wider">
-                        {ref.kind === "pubmed" ? "PubMed" : "FDA"}
-                      </span>
-                    </p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
-      )}
+      <ReferencesSection references={article.references} />
 
       {/* Related: see full analysis */}
       <div className="mt-12 rounded-lg border-2 border-primary/20 p-5">

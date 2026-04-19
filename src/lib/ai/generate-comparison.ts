@@ -18,6 +18,11 @@
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
+import {
+  fetchArticleReferences,
+  extractLikelyIngredient,
+  type ArticleReference,
+} from "@/lib/references/fetch-references";
 
 // ── Zod Schema ──────────────────────────────────────────────
 
@@ -64,7 +69,14 @@ const ComparisonSchema = z.object({
     ),
 });
 
-export type ComparisonArticle = z.infer<typeof ComparisonSchema>;
+type ComparisonArticleAiOutput = z.infer<typeof ComparisonSchema>;
+
+// AI output + retrieved references. `references` is optional so cached
+// comparisons generated before this feature landed still satisfy the
+// type.
+export type ComparisonArticle = ComparisonArticleAiOutput & {
+  references?: ArticleReference[];
+};
 
 // ── Input ───────────────────────────────────────────────────
 
@@ -98,6 +110,59 @@ function formatProduct(p: ComparisonProductInput, label: "A" | "B"): string {
   ${p.priceRange ? `Price: ${p.priceRange}` : ""}`;
 }
 
+// Build combined reference set covering both products. PubMed primary
+// term is whichever product has structured generic info first; all
+// brand + generic terms feed the FDA lookup which dedups internally.
+export async function fetchComparisonReferences(
+  input: GenerateComparisonInput
+): Promise<ArticleReference[]> {
+  const products = [input.productA, input.productB];
+  const genericsPerProduct = products.map((p) =>
+    [p.genericName, ...(p.activeIngredients ?? [])].filter(
+      (v): v is string => typeof v === "string" && v.length > 0
+    )
+  );
+  const extractedPerProduct = products.map((p) =>
+    extractLikelyIngredient(p.name)
+  );
+
+  const primaryTerm =
+    genericsPerProduct[0][0] ??
+    extractedPerProduct[0] ??
+    genericsPerProduct[1][0] ??
+    extractedPerProduct[1] ??
+    input.productA.name;
+
+  const fallbackTerms = Array.from(
+    new Set(
+      [
+        ...genericsPerProduct[0].slice(1),
+        ...genericsPerProduct[1],
+        ...extractedPerProduct.filter((e): e is string => !!e),
+      ].filter((t) => t !== primaryTerm)
+    )
+  );
+
+  const drugTerms = Array.from(
+    new Set(
+      [
+        input.productA.name,
+        input.productB.name,
+        ...genericsPerProduct[0],
+        ...genericsPerProduct[1],
+        ...extractedPerProduct.filter((e): e is string => !!e),
+      ].filter((v) => !!v && v.length > 0)
+    )
+  );
+
+  return fetchArticleReferences({
+    primaryTerm,
+    fallbackTerms,
+    drugTerms,
+    limit: 6,
+  });
+}
+
 export async function generateComparison(
   input: GenerateComparisonInput
 ): Promise<ComparisonArticle> {
@@ -118,14 +183,19 @@ Write a "${input.productA.name} vs ${input.productB.name}" comparison. Rules:
 
 Generate all fields of the structured output.`;
 
+  const referencesPromise = fetchComparisonReferences(input);
+
   try {
-    const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
-      schema: ComparisonSchema,
-      prompt,
-      temperature: 0.4,
-    });
-    return object;
+    const [{ object }, references] = await Promise.all([
+      generateObject({
+        model: google("gemini-2.5-flash"),
+        schema: ComparisonSchema,
+        prompt,
+        temperature: 0.4,
+      }),
+      referencesPromise,
+    ]);
+    return { ...object, references };
   } catch (err) {
     const detail = summarizeAiError(err);
     console.error(
