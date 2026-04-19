@@ -221,19 +221,30 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
 
   // Try AI-generated cover image first (article style).
   // Fall back to YouTube thumbnail if generation fails.
-  let thumbnailUrl: string;
+  let sourceThumbnailUrl: string;
   try {
     const { generateTrendImageUrl } = await import(
       "@/lib/ai/generate-trend-image"
     );
-    thumbnailUrl = await generateTrendImageUrl(
+    sourceThumbnailUrl = await generateTrendImageUrl(
       analysis.title,
       analysis.category,
       analysis.title
     );
   } catch {
-    thumbnailUrl = getYoutubeThumbnail(videoId);
+    sourceThumbnailUrl = getYoutubeThumbnail(videoId);
   }
+
+  // Persist to Supabase Storage so subsequent renders hit our CDN instead
+  // of Pollinations (slow, uncached) — this is the hero image and drives
+  // LCP on /expert/[slug]. Falls back to the source URL on any failure.
+  const { persistThumbnailToStorage } = await import(
+    "@/lib/images/persist-thumbnail"
+  );
+  const { url: thumbnailUrl } = await persistThumbnailToStorage(
+    sourceThumbnailUrl,
+    slug
+  );
 
   // 4.5. Ensure every mentioned product exists in DB with image + analysis
   // so the /expert/[slug] page never shows blank product cards.

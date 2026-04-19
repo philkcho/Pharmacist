@@ -20,8 +20,22 @@
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
+import { searchPubmed } from "@/lib/retrieval/search-pubmed";
+import { emptyEntities, type SourceFragment } from "@/lib/ai/types";
 
 // ── Zod Schema ──────────────────────────────────────────────
+
+// Public-shaped citation persisted alongside the article. We store the
+// retrieved SourceFragment subset that actually renders on the page —
+// avoids leaking the full retrieval metadata into JSONB and keeps the
+// type stable across future retriever refactors.
+export interface SafetyReference {
+  title: string;
+  url: string;
+  kind: "pubmed" | "fda";
+  citation?: string;
+  year?: string;
+}
 
 const SafetyArticleSchema = z.object({
   hookAnswer: z
@@ -81,7 +95,15 @@ const SafetyArticleSchema = z.object({
     ),
 });
 
-export type SafetyArticle = z.infer<typeof SafetyArticleSchema>;
+type SafetyArticleAiOutput = z.infer<typeof SafetyArticleSchema>;
+
+// What we actually persist and render — the AI output plus retrieved
+// references (populated outside the AI call to guarantee real URLs,
+// never hallucinated). `references` is optional so older cached
+// articles generated before this change still satisfy the type.
+export type SafetyArticle = SafetyArticleAiOutput & {
+  references?: SafetyReference[];
+};
 
 // ── Input ───────────────────────────────────────────────────
 
@@ -132,14 +154,24 @@ Write a "Is ${input.productName} Safe?" Q&A article. Rules:
 
 Generate all fields of the structured output.`;
 
+  // Fetch real peer-reviewed references in parallel with AI generation.
+  // PubMed URLs are real — we never ask Gemini to invent them, which
+  // eliminates the citation-hallucination risk that plagues AI health
+  // content. Failure is non-fatal: the article still publishes, just
+  // without a References section.
+  const referencesPromise = fetchSafetyReferences(input);
+
   try {
-    const { object } = await generateObject({
-      model: google("gemini-2.5-flash"),
-      schema: SafetyArticleSchema,
-      prompt,
-      temperature: 0.4,
-    });
-    return object;
+    const [{ object }, references] = await Promise.all([
+      generateObject({
+        model: google("gemini-2.5-flash"),
+        schema: SafetyArticleSchema,
+        prompt,
+        temperature: 0.4,
+      }),
+      referencesPromise,
+    ]);
+    return { ...object, references };
   } catch (err) {
     const detail = summarizeAiError(err);
     console.error(
@@ -147,6 +179,127 @@ Generate all fields of the structured output.`;
     );
     throw err;
   }
+}
+
+// ── References ─────────────────────────────────────────────
+//
+// Drives PubMed (review articles first) off the product's generic and
+// active ingredients — falls back to the brand name if neither is set.
+// Fragment → SafetyReference mapping strips internal retrieval fields
+// we don't want frozen in JSONB.
+
+async function fetchSafetyReferences(
+  input: GenerateSafetyInput
+): Promise<SafetyReference[]> {
+  const generics = [
+    input.genericName,
+    ...(input.activeIngredients ?? []),
+  ].filter((v): v is string => typeof v === "string" && v.length > 0);
+
+  // Build progressively simpler queries. PubMed's review-article filter
+  // is strict — a full brand name like "Doctor's Best Pure Vitamin C
+  // Powder with Quali-C" returns zero hits, so we retry with just the
+  // generic ingredient or a keyword extracted from the brand name.
+  const candidates: { query: string; entities: typeof emptyEntities extends () => infer T ? T : never }[] = [];
+
+  if (generics.length > 0) {
+    candidates.push({
+      query: generics[0],
+      entities: { ...emptyEntities(), genericIngredients: generics },
+    });
+  }
+
+  const extracted = extractLikelyIngredient(input.productName);
+  if (extracted && !generics.includes(extracted)) {
+    candidates.push({
+      query: extracted,
+      entities: { ...emptyEntities(), genericIngredients: [extracted] },
+    });
+  }
+
+  for (const c of candidates) {
+    try {
+      const { fragments } = await searchPubmed({ ...c, limit: 6 });
+      if (fragments.length > 0) {
+        return fragments.slice(0, 6).map(fragmentToReference);
+      }
+    } catch (err) {
+      console.warn(
+        "[safety-article] reference fetch failed:",
+        err instanceof Error ? err.message : err
+      );
+    }
+  }
+  return [];
+}
+
+// Lightweight ingredient-name guesser for products without structured
+// genericName or activeIngredients. Covers the ~30 most common OTC /
+// supplement ingredients we stock — good enough for PubMed search
+// fallback without adding an LLM call.
+const COMMON_INGREDIENT_TERMS = [
+  "vitamin c",
+  "vitamin d",
+  "vitamin e",
+  "vitamin k",
+  "vitamin b12",
+  "vitamin a",
+  "omega-3",
+  "fish oil",
+  "probiotics",
+  "melatonin",
+  "magnesium",
+  "zinc",
+  "iron",
+  "calcium",
+  "biotin",
+  "collagen",
+  "glucosamine",
+  "turmeric",
+  "curcumin",
+  "ashwagandha",
+  "ginseng",
+  "coq10",
+  "niacinamide",
+  "hyaluronic acid",
+  "retinol",
+  "retinoid",
+  "salicylic acid",
+  "glycolic acid",
+  "azelaic acid",
+  "benzoyl peroxide",
+  "acetaminophen",
+  "ibuprofen",
+  "naproxen",
+  "aspirin",
+  "diphenhydramine",
+  "loratadine",
+  "cetirizine",
+  "famotidine",
+  "omeprazole",
+  "melatonin",
+  "creatine",
+  "ashwagandha",
+  "spermidine",
+];
+
+function extractLikelyIngredient(name: string): string | null {
+  const lower = name.toLowerCase();
+  for (const term of COMMON_INGREDIENT_TERMS) {
+    if (lower.includes(term)) return term;
+  }
+  return null;
+}
+
+function fragmentToReference(f: SourceFragment): SafetyReference {
+  const isFda = f.sourceType.startsWith("fda_");
+  return {
+    title: f.title,
+    url: f.url,
+    kind: isFda ? "fda" : "pubmed",
+    citation: f.citation,
+    year: f.publishedAt,
+  };
 }
 
 function summarizeAiError(err: unknown): string {
