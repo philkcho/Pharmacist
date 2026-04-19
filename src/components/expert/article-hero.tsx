@@ -23,7 +23,7 @@ export function ArticleHero({
   thumbnailUrl,
 }: ArticleHeroProps) {
   return (
-    <div className="relative h-[320px] w-full overflow-hidden sm:h-[420px] lg:h-[480px]">
+    <div className="relative h-[180px] w-full overflow-hidden sm:h-[220px] lg:h-[260px]">
       {thumbnailUrl ? (
         <Image
           src={thumbnailUrl}
@@ -45,18 +45,18 @@ export function ArticleHero({
 
       {/* Overlay content — anchored to bottom, centered max-width */}
       <div className="absolute inset-x-0 bottom-0">
-        <div className="mx-auto max-w-3xl px-4 pb-8 sm:px-6 sm:pb-10 lg:pb-12">
+        <div className="mx-auto max-w-3xl px-4 pb-4 sm:px-6 sm:pb-5 lg:pb-6">
           <Badge
             variant="secondary"
-            className="mb-3 bg-white/15 text-white backdrop-blur-sm hover:bg-white/25"
+            className="mb-2 bg-white/15 text-white backdrop-blur-sm hover:bg-white/25"
           >
             {categoryLabel}
           </Badge>
-          <h1 className="text-balance text-3xl font-bold leading-tight tracking-tight text-white drop-shadow-sm sm:text-4xl lg:text-5xl">
+          <h1 className="text-balance text-2xl font-bold leading-tight tracking-tight text-white drop-shadow-sm sm:text-3xl lg:text-4xl">
             {title}
           </h1>
-          <div className="mt-3 flex items-center gap-1.5 text-sm text-white/80">
-            <Clock className="h-4 w-4" />
+          <div className="mt-2 flex items-center gap-1.5 text-xs text-white/80">
+            <Clock className="h-3.5 w-3.5" />
             <span>~{readMinutes} min read</span>
           </div>
         </div>
