@@ -9,6 +9,7 @@ import {
   slugifyTitle,
 } from "@/lib/youtube/transcript";
 import { analyzeExpertVideo } from "@/lib/ai/analyze-expert-video";
+import type { ArticleReference } from "@/lib/references/fetch-references";
 
 export type ExpertPickRow = {
   id: number;
@@ -35,6 +36,7 @@ export type ExpertPickRow = {
         imageUrl?: string | null;
       }[]
     | null;
+  references?: ArticleReference[] | null;
   status: string;
   publishedAt: string | null;
   createdAt: string | null;
@@ -75,6 +77,9 @@ function mapRow(row: Record<string, unknown>): ExpertPickRow {
             imageUrl?: string | null;
           }[]
         | null) ?? null,
+    references: Array.isArray(row.references_jsonb)
+      ? (row.references_jsonb as ArticleReference[])
+      : null,
     status: row.status as string,
     publishedAt: (row.published_at as string | null) ?? null,
     createdAt: (row.created_at as string | null) ?? null,
@@ -303,6 +308,35 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
     `[expert-picks] ${analysis.mentionedProducts.length} products extracted → ${enrichedProducts.length} with purchase links`
   );
 
+  // 4.9. Fetch FDA + PubMed references using the branded products as
+  // drug terms and the article title as the PubMed primary term.
+  // Independent-research voice rule still applies — no link back to
+  // the original video; these are public regulator/peer-review sources.
+  let references: ArticleReference[] = [];
+  try {
+    const { fetchArticleReferences, extractLikelyIngredient } = await import(
+      "@/lib/references/fetch-references"
+    );
+    const drugTerms = Array.from(
+      new Set(enrichedProducts.map((p) => p.name).filter(Boolean))
+    );
+    const primaryTerm =
+      extractLikelyIngredient(analysis.title) ??
+      extractLikelyIngredient(analysis.summary ?? "") ??
+      analysis.title;
+    references = await fetchArticleReferences({
+      primaryTerm,
+      fallbackTerms: [analysis.title, analysis.category],
+      drugTerms,
+      limit: 6,
+    });
+  } catch (err) {
+    console.warn(
+      "[expert-picks] references fetch failed:",
+      err instanceof Error ? err.message : err
+    );
+  }
+
   // 5. Save to DB
   const { data, error } = await supabase
     .from("expert_picks")
@@ -322,6 +356,7 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
       proper_notes: analysis.properNotes,
       analysis_sections: analysis.analysisSections,
       mentioned_products: enrichedProducts,
+      references_jsonb: references,
       status: "draft",
     })
     .select("id")

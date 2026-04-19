@@ -21,6 +21,7 @@ import { getProductAnalysis, type IngredientDetail } from "@/lib/actions/analysi
 import { StickyBuyBar } from "./sticky-buy-bar";
 import type { Metadata } from "next";
 import { ProductReviewJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
+import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 interface AnalysisPageProps {
@@ -287,36 +288,22 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
           </section>
         )}
 
-        {/* ===== Research & Sources ===== */}
-        <section className="mt-8">
-          <h2 className="flex items-center gap-2 text-xl font-semibold">
-            <BookOpen className="h-5 w-5 text-primary" />
-            Research &amp; References
-          </h2>
-          <div className="mt-4 rounded-lg border bg-muted/30 p-4">
-            <p className="text-sm text-muted-foreground">
+        {/* ===== Research & References ===== */}
+        {data.references.length > 0 ? (
+          <ReferencesSection references={data.references} className="mt-8" />
+        ) : (
+          <section className="mt-8">
+            <h2 className="flex items-center gap-2 text-xl font-semibold">
+              <BookOpen className="h-5 w-5 text-primary" />
+              Research &amp; References
+            </h2>
+            <p className="mt-3 rounded-lg border bg-muted/30 p-4 text-sm text-muted-foreground">
               {data.found
-                ? "This product analysis is based on FDA drug labels, PubMed clinical studies, and pharmacist expertise. Sources are cited inline where applicable."
+                ? "FDA and PubMed citations are being compiled for this product."
                 : "Detailed research references will be available once this product is reviewed by a pharmacist."}
             </p>
-            {data.found && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Badge variant="outline" className="text-xs">
-                  <FlaskConical className="mr-1 h-3 w-3" />
-                  FDA Drug Labels
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <BookOpen className="mr-1 h-3 w-3" />
-                  PubMed Reviews
-                </Badge>
-                <Badge variant="outline" className="text-xs">
-                  <Users className="mr-1 h-3 w-3" />
-                  Pharmacist Review
-                </Badge>
-              </div>
-            )}
-          </div>
-        </section>
+          </section>
+        )}
 
       </div>
 

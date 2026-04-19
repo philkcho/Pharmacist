@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import type { ArticleReference } from "@/lib/references/fetch-references";
 
 export interface IngredientDetail {
   name: string;
@@ -39,6 +40,7 @@ export interface AnalysisPageData {
   warnings: string | null;
   sideEffects: string | null;
   purchaseOptions: PurchaseOption[];
+  references: ArticleReference[];
 }
 
 const RETAILER_EMOJI: Record<string, string> = {
@@ -97,7 +99,7 @@ export async function getProductAnalysis(
   const { data: med } = await supabase
     .from("medications")
     .select(
-      "id, name, slug, generic_name, brand_names, description, image_url, product_type, price_range, verdict, pros, cons, ingredient_analysis, warnings, side_effects"
+      "id, name, slug, generic_name, brand_names, description, image_url, product_type, price_range, verdict, pros, cons, ingredient_analysis, warnings, side_effects, references_jsonb"
     )
     .or(`slug.eq.${slug},name.ilike.%${decoded}%`)
     .limit(1)
@@ -148,6 +150,9 @@ export async function getProductAnalysis(
       warnings: (med.warnings as string) ?? null,
       sideEffects: (med.side_effects as string) ?? null,
       purchaseOptions,
+      references: Array.isArray(med.references_jsonb)
+        ? (med.references_jsonb as ArticleReference[])
+        : [],
     };
   }
 
@@ -169,5 +174,6 @@ export async function getProductAnalysis(
     warnings: null,
     sideEffects: null,
     purchaseOptions: [],
+    references: [],
   };
 }

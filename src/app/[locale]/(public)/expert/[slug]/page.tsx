@@ -12,6 +12,7 @@ import { getExpertPickBySlug } from "@/lib/actions/expert-picks";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
+import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 import { ArticleHero } from "@/components/expert/article-hero";
 import {
@@ -101,6 +102,9 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
   }
   if (pick.mentionedProducts && pick.mentionedProducts.length > 0) {
     tocItems.push({ id: "products", label: "Products mentioned" });
+  }
+  if (pick.references && pick.references.length > 0) {
+    tocItems.push({ id: "references", label: "References" });
   }
 
   const lastReviewedAt = pick.publishedAt ?? pick.createdAt;
@@ -249,6 +253,16 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
                   ))}
                 </div>
               </section>
+            )}
+
+            {/* References — regulator + peer-reviewed sources */}
+            {pick.references && pick.references.length > 0 && (
+              <div id="references" className="scroll-mt-24">
+                <ReferencesSection
+                  references={pick.references}
+                  className="mt-10"
+                />
+              </div>
             )}
 
             {/* About the Reviewer — editorial authority re-anchor */}
