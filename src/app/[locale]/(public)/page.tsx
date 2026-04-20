@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
-import { PersonalConsultHero } from "@/components/home/personal-consult-hero";
+import { HomeSearchBar } from "@/components/home/home-search-bar";
 import { ExpertPickCard } from "@/components/expert/expert-pick-card";
 import { TrendCover } from "@/components/trending/trend-cover";
 
@@ -58,8 +58,25 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero — Personal Consult (★ primary value prop) */}
-      <PersonalConsultHero />
+      {/* Hero — compact, search-focused */}
+      <section className="bg-gradient-to-b from-primary/5 to-background pb-2 pt-6">
+        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
+          <div className="flex items-center justify-center gap-2">
+            <Pill className="h-8 w-8 text-primary" />
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              Dr.pharmacist
+            </h1>
+          </div>
+          <p className="mt-3 text-lg text-muted-foreground">
+            We read the science so you don&apos;t have to
+          </p>
+
+          {/* Hero search bar */}
+          <div className="mx-auto mt-6 max-w-xl">
+            <HomeSearchBar />
+          </div>
+        </div>
+      </section>
 
       {/* Dr.'s Analysis — Expert-analyzed content from video sources */}
       <section className="pb-2 pt-4">
