@@ -1,18 +1,24 @@
 "use client";
 
+import { Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Pill } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginInner() {
+  const searchParams = useSearchParams();
+  const next = searchParams.get("next") ?? "/";
+
   async function handleGoogleLogin() {
     const supabase = createClient();
+    // Preserve `next` through the OAuth callback so the user returns
+    // to the page they came from (e.g. /consult/new).
+    const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
+      options: { redirectTo: callback },
     });
   }
 
@@ -23,9 +29,9 @@ export default function LoginPage() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Pill className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-xl">Dr.pharmacist Admin</CardTitle>
+          <CardTitle className="text-xl">Dr.pharmacist</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
-            Sign in to manage articles and medications
+            Sign in to send your question to a licensed pharmacist.
           </p>
         </CardHeader>
         <CardContent>
@@ -54,8 +60,19 @@ export default function LoginPage() {
             </svg>
             Sign in with Google
           </Button>
+          <p className="mt-4 text-center text-xs text-muted-foreground">
+            By continuing, you agree to our educational-use terms.
+          </p>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
   );
 }

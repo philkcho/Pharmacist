@@ -786,6 +786,330 @@ export const expertPicks = pgTable("expert_picks", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 });
 
+// ─── Personalization & Consult (migrations 015–020) ──────────────
+
+// Enums for user_profiles
+export const skinTypeEnum = pgEnum("skin_type", [
+  "oily",
+  "dry",
+  "combination",
+  "sensitive",
+  "normal",
+  "unknown",
+]);
+
+export const pregnancyStatusEnum = pgEnum("pregnancy_status", [
+  "not_applicable",
+  "trying",
+  "pregnant",
+  "breastfeeding",
+]);
+
+// 1:1 with auth.users — health context the user explicitly provides.
+// Powers Personal Consult input, ingredient warnings, and digest emails.
+export const userProfiles = pgTable("user_profiles", {
+  userId: uuid("user_id").primaryKey(),
+  displayName: text("display_name"),
+
+  ageRange: text("age_range"),
+  pregnancyStatus: pregnancyStatusEnum("pregnancy_status")
+    .notNull()
+    .default("not_applicable"),
+
+  skinType: skinTypeEnum("skin_type").notNull().default("unknown"),
+  conditions: text().array().notNull().default(sql`'{}'::text[]`),
+  allergies: text().array().notNull().default(sql`'{}'::text[]`),
+  primaryConcerns: text("primary_concerns")
+    .array()
+    .notNull()
+    .default(sql`'{}'::text[]`),
+
+  emailOptIn: boolean("email_opt_in").notNull().default(false),
+  pushOptIn: boolean("push_opt_in").notNull().default(false),
+  digestFrequency: text("digest_frequency").notNull().default("weekly"),
+
+  createdAt: timestamp("created_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow(),
+});
+
+// Generic bookmarks across content types. item_id is text to support
+// both bigint (medications, expert_picks) and uuid (consults) PKs.
+export const savedItemTypeEnum = pgEnum("saved_item_type", [
+  "medication",
+  "article",
+  "expert_pick",
+  "trend",
+  "consult",
+  "qa",
+]);
+
+export const userSavedItems = pgTable(
+  "user_saved_items",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: uuid("user_id").notNull(),
+    itemType: savedItemTypeEnum("item_type").notNull(),
+    itemId: text("item_id").notNull(),
+    notes: text(),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("user_saved_items_unique").on(
+      table.userId,
+      table.itemType,
+      table.itemId
+    ),
+    index("idx_user_saved_items_user").on(table.userId, table.createdAt),
+    index("idx_user_saved_items_item").on(table.itemType, table.itemId),
+  ]
+);
+
+// What the user actually takes / uses. Two-tier matching: medication_id
+// (resolved) or unmatched_name (free text, upgraded later).
+export const stackItemTypeEnum = pgEnum("stack_item_type", [
+  "medication",
+  "supplement",
+  "cosmetic",
+]);
+
+export const userStack = pgTable(
+  "user_stack",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: uuid("user_id").notNull(),
+    itemType: stackItemTypeEnum("item_type").notNull(),
+
+    medicationId: bigint("medication_id", { mode: "number" }),
+    unmatchedName: text("unmatched_name"),
+
+    dosage: text(),
+    frequency: text(),
+    timingNotes: text("timing_notes"),
+    startedAt: date("started_at"),
+    notes: text(),
+
+    source: text(),
+    sourceAttachmentUrl: text("source_attachment_url"),
+
+    isActive: boolean("is_active").notNull().default(true),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archiveReason: text("archive_reason"),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_user_stack_user_active").on(table.userId, table.isActive),
+    index("idx_user_stack_medication").on(table.medicationId),
+  ]
+);
+
+// ─── Consults (unified Personal Consult + Public Q&A) ────────────
+
+export const consultStatusEnum = pgEnum("consult_status", [
+  "pending",
+  "ai_drafting",
+  "ready_for_review",
+  "in_review",
+  "approved",
+  "needs_more_info",
+  "rejected",
+  "archived",
+]);
+
+export const consultVisibilityEnum = pgEnum("consult_visibility", [
+  "private",
+  "pending_publish",
+  "public",
+  "archived",
+]);
+
+export const consultCategoryEnum = pgEnum("consult_category", [
+  "drug_interactions",
+  "skin_care",
+  "supplements",
+  "symptoms",
+  "pregnancy",
+  "pediatric",
+  "mental_health",
+  "general",
+]);
+
+// Full lifecycle in one row: input → AI draft → pharmacist review →
+// customer answer → optional anonymized publish to /ask/[slug].
+export const consults = pgTable(
+  "consults",
+  {
+    id: uuid().primaryKey().defaultRandom(),
+    slug: text().unique(),
+
+    userId: uuid("user_id"),
+    email: text(),
+    emailVerified: boolean("email_verified").notNull().default(false),
+
+    // Multi-modal input
+    rawInputJsonb: jsonb("raw_input_jsonb").notNull(),
+    inputTypes: text("input_types")
+      .array()
+      .notNull()
+      .default(sql`'{}'::text[]`),
+    profileSnapshot: jsonb("profile_snapshot"),
+    stackSnapshot: jsonb("stack_snapshot"),
+
+    // AI 1차 검토
+    aiDraftJsonb: jsonb("ai_draft_jsonb"),
+    aiReferencesJsonb: jsonb("ai_references_jsonb"),
+    aiRecommendationsJsonb: jsonb("ai_recommendations_jsonb"),
+    aiCompletedAt: timestamp("ai_completed_at", { withTimezone: true }),
+    aiModel: text("ai_model"),
+
+    // Similarity matching (pgvector embedding declared via raw SQL)
+    // Drizzle has no first-class vector type; treated as opaque here.
+    similarConsultId: uuid("similar_consult_id"),
+    similarityScore: numeric("similarity_score", { precision: 4, scale: 3 }),
+
+    status: consultStatusEnum().notNull().default("pending"),
+    priority: smallint().notNull().default(0),
+    isHighRisk: boolean("is_high_risk").notNull().default(false),
+
+    // 약사 최종 검토
+    pharmacistId: uuid("pharmacist_id"),
+    pharmacistFinalJsonb: jsonb("pharmacist_final_jsonb"),
+    pharmacistEditSummary: text("pharmacist_edit_summary"),
+    pharmacistTimeSeconds: integer("pharmacist_time_seconds"),
+    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+
+    // 공개
+    visibility: consultVisibilityEnum().notNull().default("private"),
+    category: consultCategoryEnum().notNull().default("general"),
+    redactedInputJsonb: jsonb("redacted_input_jsonb"),
+    redactedAnswerJsonb: jsonb("redacted_answer_jsonb"),
+    relatedProductIds: bigint("related_product_ids", { mode: "number" })
+      .array()
+      .notNull()
+      .default(sql`'{}'::bigint[]`),
+    publishedAt: timestamp("published_at", { withTimezone: true }),
+
+    viewCount: integer("view_count").notNull().default(0),
+    helpfulCount: integer("helpful_count").notNull().default(0),
+    affiliateClicks: integer("affiliate_clicks").notNull().default(0),
+
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    archivedAt: timestamp("archived_at", { withTimezone: true }),
+    archiveReason: text("archive_reason"),
+  },
+  (table) => [
+    index("idx_consults_user").on(table.userId, table.createdAt),
+    index("idx_consults_status_priority").on(
+      table.status,
+      table.priority,
+      table.createdAt
+    ),
+    index("idx_consults_public").on(table.visibility, table.publishedAt),
+    index("idx_consults_public_category").on(table.category, table.publishedAt),
+  ]
+);
+
+export const consultMessageRoleEnum = pgEnum("consult_message_role", [
+  "user",
+  "pharmacist",
+  "ai",
+  "system",
+]);
+
+export const consultFollowups = pgTable(
+  "consult_followups",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    consultId: uuid("consult_id").notNull(),
+    role: consultMessageRoleEnum().notNull(),
+    authorId: uuid("author_id"),
+    message: text().notNull(),
+    attachments: jsonb(),
+    sentEmail: boolean("sent_email").notNull().default(false),
+    sentEmailAt: timestamp("sent_email_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_consult_followups_consult_created").on(
+      table.consultId,
+      table.createdAt
+    ),
+  ]
+);
+
+// ─── Notification log ────────────────────────────────────────────
+
+export const notificationChannelEnum = pgEnum("notification_channel", [
+  "email",
+  "push",
+  "sms",
+]);
+
+export const notificationStatusEnum = pgEnum("notification_status", [
+  "queued",
+  "sent",
+  "delivered",
+  "opened",
+  "clicked",
+  "bounced",
+  "failed",
+  "unsubscribed",
+]);
+
+export const notificationLog = pgTable(
+  "notification_log",
+  {
+    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
+    userId: uuid("user_id"),
+    email: text(),
+    channel: notificationChannelEnum().notNull(),
+    template: text().notNull(),
+    subject: text(),
+    payloadJsonb: jsonb("payload_jsonb"),
+    provider: text(),
+    providerId: text("provider_id"),
+    consultId: uuid("consult_id"),
+    status: notificationStatusEnum().notNull().default("queued"),
+    statusAt: timestamp("status_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+    errorMessage: text("error_message"),
+    deliveredAt: timestamp("delivered_at", { withTimezone: true }),
+    openedAt: timestamp("opened_at", { withTimezone: true }),
+    clickedAt: timestamp("clicked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("idx_notification_log_user_created").on(table.userId, table.createdAt),
+    index("idx_notification_log_template_status").on(
+      table.template,
+      table.status,
+      table.createdAt
+    ),
+    index("idx_notification_log_consult").on(table.consultId),
+  ]
+);
+
 // ─── Page Views (Analytics) ───────────────────────────────────────
 export const pageViews = pgTable(
   "page_views",

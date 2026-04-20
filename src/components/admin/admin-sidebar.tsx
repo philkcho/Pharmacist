@@ -29,6 +29,7 @@ import {
   BarChart3,
   LogOut,
   Users,
+  MessageSquare,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -67,6 +68,11 @@ const menuItems = [
     title: "Trends",
     href: "/trends",
     icon: TrendingUp,
+  },
+  {
+    title: "Consult Queue",
+    href: "/consult-queue",
+    icon: MessageSquare,
   },
   {
     title: "Approval Queue",

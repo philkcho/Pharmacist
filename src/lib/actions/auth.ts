@@ -14,7 +14,7 @@ export async function signIn(formData: { email: string; password: string }) {
 export async function signOut() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  redirect("/login");
+  redirect("/");
 }
 
 export async function getSession() {

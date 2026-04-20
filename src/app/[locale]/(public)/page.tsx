@@ -6,6 +6,8 @@ import {
   Pill,
   Sparkles,
   FileText,
+  MessageCircleQuestion,
+  ShieldCheck,
 } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
@@ -13,9 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
+import { listPublicConsults, type ConsultRecord } from "@/lib/actions/consults";
 import { HomeSearchBar } from "@/components/home/home-search-bar";
 import { ExpertPickCard } from "@/components/expert/expert-pick-card";
 import { TrendCover } from "@/components/trending/trend-cover";
+import { ConsultMobileCta } from "@/components/consult/consult-mobile-cta";
+import { createClient } from "@/lib/supabase/server";
+import type { ConsultDraft } from "@/lib/ai/draft-consult";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
@@ -51,9 +57,12 @@ export const metadata: Metadata = {
 };
 
 export default async function Home() {
-  const [trends, expertPicks] = await Promise.all([
+  const supabase = await createClient();
+  const [trends, expertPicks, publicConsults, { data: { user } }] = await Promise.all([
     listPublishedTrendsWithHeadline(3),
     listPublishedExpertPicks(3),
+    listPublicConsults({ limit: 6 }),
+    supabase.auth.getUser(),
   ]);
 
   return (
@@ -77,6 +86,9 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Mobile-only Consult CTA (desktop uses ConsultSidebar in layout) */}
+      <ConsultMobileCta isAuthed={!!user} />
 
       {/* Dr.'s Analysis — Expert-analyzed content from video sources */}
       <section className="pb-2 pt-4">
@@ -119,6 +131,37 @@ export default async function Home() {
           )}
         </div>
       </section>
+
+      {/* Community Q&A — public pharmacist-reviewed consults */}
+      {publicConsults.length > 0 && (
+        <section className="pb-2 pt-4">
+          <div className="mx-auto max-w-4xl px-4 sm:px-6">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-2xl font-bold">
+                <MessageCircleQuestion className="h-5 w-5 text-primary" />
+                Community Q&amp;A
+              </h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                render={<Link href="/ask" />}
+              >
+                View All
+                <ArrowRight className="ml-1 h-4 w-4" />
+              </Button>
+            </div>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Real questions from customers, answered by Younghun Cho, PharmD.
+            </p>
+
+            <ul className="mt-5 grid gap-3 sm:grid-cols-2">
+              {publicConsults.slice(0, 4).map((c) => (
+                <CommunityQaCard key={c.id} consult={c} />
+              ))}
+            </ul>
+          </div>
+        </section>
+      )}
 
       {/* Worth the Hype? — Trending topics */}
       <section className="py-2">
@@ -217,5 +260,59 @@ function TrendCard({ trend }: { trend: TrendTopicRow & { headline?: string | nul
         </div>
       </div>
     </Link>
+  );
+}
+
+const CONSULT_CATEGORY_LABEL: Record<string, string> = {
+  drug_interactions: "Drug Interactions",
+  skin_care: "Skin Care",
+  supplements: "Supplements",
+  symptoms: "Symptoms",
+  pregnancy: "Pregnancy",
+  pediatric: "Pediatric",
+  mental_health: "Mental Health",
+  general: "General",
+};
+
+function CommunityQaCard({ consult }: { consult: ConsultRecord }) {
+  if (!consult.slug) return null;
+  const final = consult.pharmacistFinal as ConsultDraft | null;
+  const questionText =
+    typeof consult.rawInput.text === "string"
+      ? consult.rawInput.text
+      : "Pharmacist-reviewed answer";
+  const summary = final?.oneLineSummary ?? "";
+  const categoryLabel =
+    CONSULT_CATEGORY_LABEL[consult.category] ?? "General";
+
+  return (
+    <li>
+      <Link
+        href={`/ask/${consult.slug}`}
+        className="group flex h-full flex-col gap-2 rounded-lg border bg-card p-4 transition-all hover:border-primary/30 hover:shadow-md"
+      >
+        <div className="flex items-center gap-1.5">
+          <Badge variant="secondary" className="text-[10px]">
+            {categoryLabel}
+          </Badge>
+          <Badge className="gap-1 bg-primary/15 text-[10px] text-primary hover:bg-primary/20">
+            <ShieldCheck className="h-2.5 w-2.5" />
+            Pharmacist Reviewed
+          </Badge>
+        </div>
+        <h3 className="line-clamp-2 text-sm font-semibold leading-snug group-hover:text-primary">
+          {questionText.slice(0, 140)}
+        </h3>
+        {summary && (
+          <p className="line-clamp-2 text-xs text-muted-foreground">
+            {summary}
+          </p>
+        )}
+        <span className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-primary">
+          Read answer
+          <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
+        </span>
+      </Link>
+    </li>
   );
 }
