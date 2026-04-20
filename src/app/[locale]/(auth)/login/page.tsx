@@ -18,7 +18,16 @@ function LoginInner() {
     const callback = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callback },
+      options: {
+        redirectTo: callback,
+        // Skip Google's consent screen on repeat sign-ins. First-time users
+        // still see it (required once to grant email/profile scopes) but
+        // subsequent logins go straight through the account picker.
+        queryParams: {
+          access_type: "online",
+          prompt: "select_account",
+        },
+      },
     });
   }
 
