@@ -34,6 +34,7 @@ export async function generateMetadata({
   return {
     title: `${title} — Products & Analysis — Dr.pharmacist`,
     description: `Explore ${title}: pharmacist-analyzed products, ingredient details, and where to buy from Amazon, iHerb, StyleKorean.`,
+    alternates: { canonical: `/topics/${keyword}` },
   };
 }
 
