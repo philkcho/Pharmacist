@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Sparkles } from "lucide-react";
+import type { Metadata } from "next";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,6 +9,13 @@ import {
   getFeaturedMedications,
   getMedicationCountsByCategory,
 } from "@/lib/actions/medications";
+
+export const metadata: Metadata = {
+  title: "Compare Products | Dr.pharmacist",
+  description:
+    "Browse product categories and compare pharmacist-reviewed supplements, OTC medications, and skincare.",
+  alternates: { canonical: "/compare" },
+};
 
 const categoryEmojis: Record<string, string> = {
   "pain-relief": "💊",

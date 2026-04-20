@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Dr.'s Analysis | Dr.pharmacist",
   description:
     "Expert health & beauty videos analyzed and summarized by pharmacists. Key insights and product recommendations you can trust.",
+  alternates: { canonical: "/expert" },
 };
 
 export default async function ExpertIndexPage() {

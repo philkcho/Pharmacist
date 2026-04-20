@@ -21,6 +21,8 @@ export async function generateMetadata({
   const { q } = await searchParams;
   return {
     title: q ? `"${q}" — Search — Dr.pharmacist` : "Search — Dr.pharmacist",
+    alternates: { canonical: "/search" },
+    robots: { index: false, follow: true },
   };
 }
 

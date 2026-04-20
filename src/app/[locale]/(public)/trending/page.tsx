@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Trending Health & Beauty Topics — Dr.pharmacist",
   description:
     "This week's trending OTC medication, supplement, and skincare topics analyzed by AI with pharmacist oversight.",
+  alternates: { canonical: "/trending" },
 };
 
 export default async function TrendingIndexPage() {
