@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import {
   CheckCircle2,
   MessageSquare,
@@ -56,7 +55,6 @@ export function ConsultReviewForm({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const startTime = useState(() => Date.now())[0];
-  const router = useRouter();
 
   // Parse the JSON each render so the preview stays in sync with edits.
   let parsedDraft: ConsultDraft | null = null;
@@ -83,7 +81,9 @@ export function ConsultReviewForm({
         setError(result.error ?? "Failed");
         return;
       }
-      router.push("/consult-queue");
+      // Hard navigate so apex→www redirect stays clean and the queue
+      // page re-fetches with the now-approved row in its new tab.
+      window.location.href = "/consult-queue?status=approved";
     });
   }
 
@@ -108,7 +108,9 @@ export function ConsultReviewForm({
         setError(result.error ?? "Failed");
         return;
       }
-      router.push("/consult-queue");
+      // Hard navigate so apex→www redirect stays clean and the queue
+      // page re-fetches with the now-approved row in its new tab.
+      window.location.href = "/consult-queue?status=approved";
     });
   }
 
@@ -124,7 +126,9 @@ export function ConsultReviewForm({
         setError(result.error ?? "Failed");
         return;
       }
-      router.push("/consult-queue");
+      // Hard navigate so apex→www redirect stays clean and the queue
+      // page re-fetches with the now-approved row in its new tab.
+      window.location.href = "/consult-queue?status=approved";
     });
   }
 
@@ -140,7 +144,9 @@ export function ConsultReviewForm({
         setError(result.error ?? "Failed");
         return;
       }
-      router.push("/consult-queue");
+      // Hard navigate so apex→www redirect stays clean and the queue
+      // page re-fetches with the now-approved row in its new tab.
+      window.location.href = "/consult-queue?status=approved";
     });
   }
 
