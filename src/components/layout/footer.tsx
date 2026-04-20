@@ -8,11 +8,11 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="mt-auto border-t bg-muted/40">
+    <footer className="mt-auto border-t">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
         {/* FDA Disclaimer */}
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4 text-sm text-yellow-800 dark:border-yellow-900 dark:bg-yellow-950 dark:text-yellow-200">
-          <p className="font-medium">Medical Disclaimer</p>
+        <div className="rounded-lg border p-4 text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">Medical Disclaimer</p>
           <p className="mt-1 leading-relaxed">{t("footer.disclaimer")}</p>
         </div>
 
