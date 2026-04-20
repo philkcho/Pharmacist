@@ -9,6 +9,7 @@ interface ArticleHeroProps {
   categoryLabel: string;
   readMinutes: number;
   thumbnailUrl?: string | null;
+  fallbackCover?: React.ReactNode;
 }
 
 // Magazine-style hero: full-bleed cover with dark gradient overlay and
@@ -21,6 +22,7 @@ export function ArticleHero({
   categoryLabel,
   readMinutes,
   thumbnailUrl,
+  fallbackCover,
 }: ArticleHeroProps) {
   return (
     <div className="relative h-[180px] w-full overflow-hidden sm:h-[220px] lg:h-[260px]">
@@ -35,7 +37,7 @@ export function ArticleHero({
         />
       ) : (
         <div className="absolute inset-0">
-          <DrCover category={category} />
+          {fallbackCover ?? <DrCover category={category} />}
         </div>
       )}
 

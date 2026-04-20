@@ -21,7 +21,7 @@ import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 interface Props {
   params: Promise<{ slug: string; locale: string }>;

@@ -35,7 +35,7 @@ export async function generateMetadata({
 
   const title = pick.title;
   const description = pick.summary?.slice(0, 160) ?? "";
-  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/expert/${slug}`;
+  const url = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com"}/expert/${slug}`;
 
   return {
     title,
@@ -84,7 +84,7 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
     )
   );
 
-  const expertUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/expert/${slug}`;
+  const expertUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com"}/expert/${slug}`;
 
   // Build TOC — only include sections that will actually render.
   const tocItems: TocItem[] = [];
@@ -121,8 +121,8 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
       />
       <BreadcrumbListJsonLd
         items={[
-          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/` },
-          { name: "Dr.'s Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com"}/expert` },
+          { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com"}/` },
+          { name: "Dr.'s Analysis", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com"}/expert` },
           { name: pick.title, url: expertUrl },
         ]}
       />

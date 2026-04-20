@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -12,6 +12,7 @@ export default function robots(): MetadataRoute.Robots {
           "/dashboard",
           "/articles/generate",
           "/approval-queue",
+          "/consult-queue",
           "/review-requests",
           "/expert-picks",  // admin expert-picks, not /expert/
           "/retailers",

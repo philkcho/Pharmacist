@@ -13,7 +13,7 @@ export const SITE_AUTHOR = {
 } as const;
 
 const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 // JSON-LD Person representation of the author — used as Article.author,
 // Article.reviewedBy, Review.author, and on /about ProfilePage.

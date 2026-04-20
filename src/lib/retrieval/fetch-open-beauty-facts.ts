@@ -78,7 +78,7 @@ async function searchOBF(
   ].join(","));
 
   const res = await fetch(url.toString(), {
-    headers: { "User-Agent": "DrPharmacist/1.0 (https://drpharmacist.com)" },
+    headers: { "User-Agent": "DrPharmacist/1.0 (https://www.aipharmcare.com)" },
     next: { revalidate: ONE_DAY_SECONDS },
   });
 

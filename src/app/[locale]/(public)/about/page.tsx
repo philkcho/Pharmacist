@@ -3,7 +3,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { SITE_AUTHOR, authorPersonSchema } from "@/lib/author";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 export const metadata: Metadata = {
   title: "About — Dr.pharmacist",

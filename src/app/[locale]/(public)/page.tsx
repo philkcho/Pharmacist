@@ -13,10 +13,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import { listPublishedExpertPicks } from "@/lib/actions/expert-picks";
-import { HomeSearchBar } from "@/components/home/home-search-bar";
+import { PersonalConsultHero } from "@/components/home/personal-consult-hero";
 import { ExpertPickCard } from "@/components/expert/expert-pick-card";
+import { TrendCover } from "@/components/trending/trend-cover";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 export const metadata: Metadata = {
   title: "Dr.pharmacist — Pharmacist-Reviewed Supplements, OTC & Skincare",
@@ -57,25 +58,8 @@ export default async function Home() {
 
   return (
     <div className="flex flex-col">
-      {/* Hero — compact, search-focused */}
-      <section className="bg-gradient-to-b from-primary/5 to-background pb-2 pt-6">
-        <div className="mx-auto max-w-3xl px-4 text-center sm:px-6">
-          <div className="flex items-center justify-center gap-2">
-            <Pill className="h-8 w-8 text-primary" />
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Dr.pharmacist
-            </h1>
-          </div>
-          <p className="mt-3 text-lg text-muted-foreground">
-            We read the science so you don&apos;t have to
-          </p>
-
-          {/* Hero search bar */}
-          <div className="mx-auto mt-6 max-w-xl">
-            <HomeSearchBar />
-          </div>
-        </div>
-      </section>
+      {/* Hero — Personal Consult (★ primary value prop) */}
+      <PersonalConsultHero />
 
       {/* Dr.'s Analysis — Expert-analyzed content from video sources */}
       <section className="pb-2 pt-4">
@@ -167,17 +151,19 @@ function TrendCard({ trend }: { trend: TrendTopicRow & { headline?: string | nul
       href={`/trending/${trend.slug}`}
       className="group block overflow-hidden rounded-lg border transition-all hover:border-primary/30 hover:shadow-md"
     >
-      {/* Cover image */}
-      {trend.imageUrl && (
-        <div className="aspect-[16/9] w-full overflow-hidden bg-muted">
+      {/* Cover — real photo if present, else branded Dr.pharmacist cover */}
+      <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
+        {trend.imageUrl ? (
           <img
             src={trend.imageUrl}
             alt={trend.headline ?? trend.queryText}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
           />
-        </div>
-      )}
+        ) : (
+          <TrendCover category={trend.category ?? "health"} />
+        )}
+      </div>
 
       <div className="p-5">
         <div className="flex items-center gap-2">

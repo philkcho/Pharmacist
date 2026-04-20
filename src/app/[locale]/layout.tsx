@@ -17,7 +17,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://drpharmacist.com";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 export const metadata: Metadata = {
   title: {
