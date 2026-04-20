@@ -15,7 +15,6 @@ import {
   CheckCircle2,
   ChevronDown,
   Clock,
-  Camera,
   ShieldCheck,
   ShoppingCart,
 } from "lucide-react";
@@ -50,7 +49,7 @@ export function ConsultCard({
 }: ConsultCardProps) {
   const answered = !!finalAnswer;
   const [open, setOpen] = useState(defaultOpen);
-  const photoCount = consult.rawInput.photos?.length ?? 0;
+  const photos = consult.rawInput.photos ?? [];
 
   // Auto-expand when landing via /consult#<id>
   useEffect(() => {
@@ -97,11 +96,27 @@ export function ConsultCard({
         <p className="mt-1.5 whitespace-pre-wrap text-sm">
           {(consult.rawInput.text as string) ?? "(photo or voice submission)"}
         </p>
-        {photoCount > 0 && (
-          <p className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
-            <Camera className="h-3 w-3" />
-            {photoCount} photo{photoCount === 1 ? "" : "s"} attached
-          </p>
+        {photos.length > 0 && (
+          <div className="mt-3 flex flex-wrap gap-2">
+            {photos.map((p, idx) => (
+              <a
+                key={idx}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block h-20 w-20 overflow-hidden rounded-md border bg-background transition-opacity hover:opacity-90"
+                title="Open full size"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.url}
+                  alt={p.alt ?? `Question photo ${idx + 1}`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
         )}
       </div>
 

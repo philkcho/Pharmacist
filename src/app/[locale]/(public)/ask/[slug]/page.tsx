@@ -136,7 +136,29 @@ export default async function PublicConsultPage({ params }: PageProps) {
         <h1 className="text-2xl font-bold leading-tight sm:text-3xl">
           {questionText}
         </h1>
-        <p className="mt-2 text-xs text-muted-foreground">
+        {(consult.rawInput.photos?.length ?? 0) > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {consult.rawInput.photos!.map((p, idx) => (
+              <a
+                key={idx}
+                href={p.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block h-24 w-24 overflow-hidden rounded-md border bg-muted transition-opacity hover:opacity-90 sm:h-28 sm:w-28"
+                title="Open full size"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.url}
+                  alt={p.alt ?? `Question photo ${idx + 1}`}
+                  className="h-full w-full object-cover"
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+        )}
+        <p className="mt-3 text-xs text-muted-foreground">
           Shared by a Dr.pharmacist community member
           {consult.publishedAt
             ? ` on ${formatDate(consult.publishedAt)}`
