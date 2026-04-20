@@ -2,13 +2,15 @@
 // Surfaced on article credits, /about, footer, and JSON-LD author/reviewer
 // blocks — reinforces E-E-A-T for YMYL (health) content.
 //
-// Privacy-minimal disclosure: real name + LinkedIn URL only.
+// UI exposes: real name + email (mailto link) for direct contact.
+// JSON-LD still emits LinkedIn via `sameAs` so Google can cross-verify
+// pharmacist credentials by crawling the linked public profile.
 // No degree abbreviation, license, state, or photo is exposed.
-// Google can still cross-verify pharmacist credentials by crawling the
-// linked LinkedIn profile (sameAs), provided that profile is public.
 
 export const SITE_AUTHOR = {
   name: "Younghun Cho",
+  email: "philkucho@gmail.com",
+  // Retained for JSON-LD sameAs only — not rendered in UI anymore.
   linkedinUrl: "https://www.linkedin.com/in/younghun-cho-71b36a241/",
 } as const;
 

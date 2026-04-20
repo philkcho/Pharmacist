@@ -1,4 +1,4 @@
-import { Pill, FlaskConical, ShieldCheck, BookOpen, Mail, ExternalLink } from "lucide-react";
+import { Pill, FlaskConical, ShieldCheck, BookOpen, Mail } from "lucide-react";
 import Link from "next/link";
 import type { Metadata } from "next";
 import { SITE_AUTHOR, authorPersonSchema } from "@/lib/author";
@@ -74,13 +74,12 @@ export default function AboutPage() {
             review step.
           </p>
           <a
-            href={SITE_AUTHOR.linkedinUrl}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={`mailto:${SITE_AUTHOR.email}`}
+            aria-label={`Email ${SITE_AUTHOR.name}`}
             className="mt-3 inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
           >
-            Connect on LinkedIn
-            <ExternalLink className="h-3.5 w-3.5" />
+            <Mail className="h-3.5 w-3.5" />
+            Email {SITE_AUTHOR.name.split(" ")[0]}
           </a>
         </div>
       </section>
