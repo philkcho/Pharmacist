@@ -20,9 +20,11 @@ import {
   getAnalyticsSummary,
   getPageViewDetails,
   getClickDetails,
+  getUniqueVisitorDetails,
   type AnalyticsSummary,
   type PageViewDetail,
   type ClickDetail,
+  type VisitorDetail,
 } from "@/lib/actions/analytics";
 
 // ── Helpers ────────────────────────────────────────────────
@@ -85,6 +87,8 @@ export default function AnalyticsPage() {
   const [clicksTotal, setClicksTotal] = useState(0);
   const [clicksPage, setClicksPage] = useState(1);
   const [showClicks, setShowClicks] = useState(false);
+  const [visitors, setVisitors] = useState<VisitorDetail[]>([]);
+  const [showVisitors, setShowVisitors] = useState(false);
   const [isPending, startTransition] = useTransition();
   const searchParams = useSearchParams();
 
@@ -127,6 +131,15 @@ export default function AnalyticsPage() {
       setClicksTotal(res.total);
     });
   }, [showClicks, from, to, clicksPage]);
+
+  // Fetch unique visitor rollup
+  useEffect(() => {
+    if (!showVisitors || !from || !to) return;
+    startTransition(async () => {
+      const data = await getUniqueVisitorDetails(from, to);
+      setVisitors(data);
+    });
+  }, [showVisitors, from, to]);
 
   function applyPreset(p: string) {
     setPreset(p);
@@ -209,6 +222,8 @@ export default function AnalyticsPage() {
               title="Unique Visitors"
               value={summary.uniqueVisitors}
               icon={<Users className="h-4 w-4 text-muted-foreground" />}
+              onClick={() => setShowVisitors((v) => !v)}
+              active={showVisitors}
             />
             <StatCard
               title="Avg. Time on Page"
@@ -223,6 +238,92 @@ export default function AnalyticsPage() {
               }
             />
           </div>
+
+          {/* Unique Visitor Details (toggled by clicking the stat card) */}
+          {showVisitors && (
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                  <Users className="h-4 w-4" />
+                  Unique Visitor Details ({visitors.length})
+                </CardTitle>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setShowVisitors(false)}
+                >
+                  Hide
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {visitors.length === 0 ? (
+                  <p className="text-center text-sm text-muted-foreground">
+                    {isPending ? "Loading..." : "No visitors in this period"}
+                  </p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-left text-xs text-muted-foreground">
+                          <th className="pb-2 pr-4 font-medium">Visitor</th>
+                          <th className="pb-2 pr-4 font-medium">Pages</th>
+                          <th className="pb-2 pr-4 font-medium">Total Time</th>
+                          <th className="pb-2 pr-4 font-medium">First Visit</th>
+                          <th className="pb-2 pr-4 font-medium">Last Visit</th>
+                          <th className="pb-2 pr-4 font-medium">Country</th>
+                          <th className="pb-2 pr-4 font-medium">City</th>
+                          <th className="pb-2 pr-4 font-medium">Top Pages</th>
+                          <th className="pb-2 font-medium">Referrer</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visitors.map((v) => (
+                          <tr
+                            key={v.visitorId}
+                            className="border-b last:border-0 hover:bg-muted/30"
+                          >
+                            <td
+                              className="py-2 pr-4 font-mono text-[11px] text-muted-foreground"
+                              title={v.visitorId}
+                            >
+                              {v.visitorId.slice(0, 8)}
+                            </td>
+                            <td className="py-2 pr-4 text-xs font-medium">
+                              {v.pageCount}
+                            </td>
+                            <td className="py-2 pr-4 text-xs">
+                              {fmtDuration(v.totalDurationSeconds)}
+                            </td>
+                            <td className="whitespace-nowrap py-2 pr-4 text-xs">
+                              {fmtDate(v.firstVisitAt)}
+                            </td>
+                            <td className="whitespace-nowrap py-2 pr-4 text-xs">
+                              {fmtDate(v.lastVisitAt)}
+                            </td>
+                            <td className="py-2 pr-4 text-xs">
+                              {v.country ?? "—"}
+                            </td>
+                            <td className="py-2 pr-4 text-xs">
+                              {v.city ?? "—"}
+                            </td>
+                            <td className="max-w-[280px] py-2 pr-4 font-mono text-[11px] text-muted-foreground">
+                              <span className="block truncate" title={v.paths.join(" · ")}>
+                                {v.paths.slice(0, 3).join(" · ")}
+                                {v.paths.length > 3 ? ` +${v.paths.length - 3}` : ""}
+                              </span>
+                            </td>
+                            <td className="max-w-[160px] truncate py-2 text-xs text-muted-foreground">
+                              {v.referrer ?? "Direct"}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Daily chart (simple bar) */}
           {summary.dailyPageViews.length > 1 && (
@@ -589,15 +690,32 @@ function StatCard({
   title,
   value,
   icon,
+  onClick,
+  active,
 }: {
   title: string;
   value: number | string;
   icon: React.ReactNode;
+  onClick?: () => void;
+  active?: boolean;
 }) {
+  const clickable = !!onClick;
   return (
-    <Card>
+    <Card
+      onClick={onClick}
+      className={`${
+        clickable ? "cursor-pointer transition-colors hover:border-primary/40" : ""
+      } ${active ? "border-primary bg-primary/5" : ""}`}
+    >
       <CardHeader className="flex flex-row items-center justify-between pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <CardTitle className="text-sm font-medium">
+          {title}
+          {clickable && (
+            <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+              {active ? "(hide)" : "(click for details)"}
+            </span>
+          )}
+        </CardTitle>
         {icon}
       </CardHeader>
       <CardContent>

@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { EXCLUDE_ADMIN_CITY_FILTER } from "@/lib/analytics/admin-exclude";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -45,14 +46,16 @@ export async function getAnalyticsSummary(
     .from("page_views")
     .select("id", { count: "exact", head: true })
     .gte("created_at", fromStart)
-    .lte("created_at", toEnd);
+    .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER);
 
   // Unique visitors
   const { data: visitorRows } = await admin
     .from("page_views")
     .select("visitor_id")
     .gte("created_at", fromStart)
-    .lte("created_at", toEnd);
+    .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER);
   const uniqueVisitors = new Set(
     (visitorRows ?? []).map((r) => r.visitor_id)
   ).size;
@@ -63,7 +66,8 @@ export async function getAnalyticsSummary(
     .select("duration_seconds")
     .gte("created_at", fromStart)
     .lte("created_at", toEnd)
-    .not("duration_seconds", "is", null);
+    .not("duration_seconds", "is", null)
+    .or(EXCLUDE_ADMIN_CITY_FILTER);
   const durations = (durRows ?? [])
     .map((r) => r.duration_seconds as number)
     .filter((d) => d > 0);
@@ -84,7 +88,8 @@ export async function getAnalyticsSummary(
     .from("page_views")
     .select("path")
     .gte("created_at", fromStart)
-    .lte("created_at", toEnd);
+    .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER);
   const pageCounts = new Map<string, number>();
   for (const r of pageRows ?? []) {
     pageCounts.set(r.path, (pageCounts.get(r.path) ?? 0) + 1);
@@ -100,7 +105,8 @@ export async function getAnalyticsSummary(
     .select("country, visitor_id")
     .gte("created_at", fromStart)
     .lte("created_at", toEnd)
-    .not("country", "is", null);
+    .not("country", "is", null)
+    .or(EXCLUDE_ADMIN_CITY_FILTER);
   const countryVisitors = new Map<string, Set<string>>();
   for (const r of countryRows ?? []) {
     const c = r.country as string;
@@ -147,6 +153,7 @@ export async function getAnalyticsSummary(
     .select("created_at")
     .gte("created_at", fromStart)
     .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER)
     .order("created_at");
   const dailyMap = new Map<string, number>();
   for (const r of dailyRows ?? []) {
@@ -175,6 +182,107 @@ export async function getAnalyticsSummary(
   };
 }
 
+// ── Unique visitor aggregation ─────────────────────────────
+
+export interface VisitorDetail {
+  visitorId: string;
+  pageCount: number;
+  firstVisitAt: string;
+  lastVisitAt: string;
+  totalDurationSeconds: number;
+  country: string | null;
+  city: string | null;
+  ip: string | null;
+  referrer: string | null;
+  topPath: string;
+  paths: string[]; // unique paths visited, up to 10
+}
+
+// Group page_views by visitor_id and return per-visitor rollup.
+// In-memory group since Supabase client can't do GROUP BY directly.
+// Caps at 5000 rows so a bad date range doesn't blow memory.
+export async function getUniqueVisitorDetails(
+  from: string,
+  to: string
+): Promise<VisitorDetail[]> {
+  const admin = createAdminClient();
+  const fromStart = from + "T00:00:00.000Z";
+  const toEnd = to + "T23:59:59.999Z";
+
+  const { data } = await admin
+    .from("page_views")
+    .select(
+      "visitor_id, path, referrer, ip, country, city, duration_seconds, created_at"
+    )
+    .gte("created_at", fromStart)
+    .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER)
+    .order("created_at", { ascending: true })
+    .limit(5000);
+
+  const byVisitor = new Map<string, VisitorDetail & { pathCounts: Map<string, number> }>();
+
+  for (const row of data ?? []) {
+    const id = row.visitor_id as string;
+    if (!id) continue;
+    const createdAt = row.created_at as string;
+    const path = row.path as string;
+    const dur = (row.duration_seconds as number | null) ?? 0;
+
+    let v = byVisitor.get(id);
+    if (!v) {
+      v = {
+        visitorId: id,
+        pageCount: 0,
+        firstVisitAt: createdAt,
+        lastVisitAt: createdAt,
+        totalDurationSeconds: 0,
+        country: (row.country as string | null) ?? null,
+        city: (row.city as string | null) ?? null,
+        ip: (row.ip as string | null) ?? null,
+        referrer: (row.referrer as string | null) ?? null,
+        topPath: path,
+        paths: [],
+        pathCounts: new Map(),
+      };
+      byVisitor.set(id, v);
+    }
+    v.pageCount += 1;
+    v.lastVisitAt = createdAt;
+    v.totalDurationSeconds += dur;
+    v.pathCounts.set(path, (v.pathCounts.get(path) ?? 0) + 1);
+    // First non-null values win for geo/referrer (initial context matters most)
+    if (!v.country && row.country) v.country = row.country as string;
+    if (!v.city && row.city) v.city = row.city as string;
+    if (!v.referrer && row.referrer) v.referrer = row.referrer as string;
+  }
+
+  // Finalize per-visitor: sort paths by count desc, capture top N
+  const result: VisitorDetail[] = [];
+  for (const v of byVisitor.values()) {
+    const sortedPaths = [...v.pathCounts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([p]) => p);
+    result.push({
+      visitorId: v.visitorId,
+      pageCount: v.pageCount,
+      firstVisitAt: v.firstVisitAt,
+      lastVisitAt: v.lastVisitAt,
+      totalDurationSeconds: v.totalDurationSeconds,
+      country: v.country,
+      city: v.city,
+      ip: v.ip,
+      referrer: v.referrer,
+      topPath: sortedPaths[0] ?? "",
+      paths: sortedPaths.slice(0, 10),
+    });
+  }
+
+  // Sort by last visit, most recent first
+  result.sort((a, b) => b.lastVisitAt.localeCompare(a.lastVisitAt));
+  return result;
+}
+
 // ── Detail page view list ──────────────────────────────────
 
 export async function getPageViewDetails(
@@ -192,7 +300,8 @@ export async function getPageViewDetails(
     .from("page_views")
     .select("id", { count: "exact", head: true })
     .gte("created_at", fromStart)
-    .lte("created_at", toEnd);
+    .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER);
 
   const { data } = await admin
     .from("page_views")
@@ -201,6 +310,7 @@ export async function getPageViewDetails(
     )
     .gte("created_at", fromStart)
     .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER)
     .order("created_at", { ascending: false })
     .range(offset, offset + pageSize - 1);
 
