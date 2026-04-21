@@ -1,7 +1,10 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
-import { EXCLUDE_ADMIN_CITY_FILTER } from "@/lib/analytics/admin-exclude";
+import {
+  ADMIN_EXCLUDE_CITY,
+  EXCLUDE_ADMIN_CITY_FILTER,
+} from "@/lib/analytics/admin-exclude";
 
 // ── Types ──────────────────────────────────────────────────
 
@@ -336,9 +339,15 @@ export async function getPageViewDetails(
 export interface ClickDetail {
   id: number;
   productName: string;
+  productSlug: string | null;
   retailerName: string;
   referrerType: string;
   clickedAt: string;
+  // Visitor context (session-joined; null when session_id absent or no match)
+  country: string | null;
+  city: string | null;
+  referrerHost: string | null;
+  fromPath: string | null;
 }
 
 export async function getClickDetails(
@@ -360,7 +369,9 @@ export async function getClickDetails(
 
   const { data } = await admin
     .from("purchase_click_events")
-    .select("id, medication_id, retailer_id, referrer_type, clicked_at")
+    .select(
+      "id, medication_id, retailer_id, referrer_type, session_id, clicked_at"
+    )
     .gte("clicked_at", fromStart)
     .lte("clicked_at", toEnd)
     .order("clicked_at", { ascending: false })
@@ -371,22 +382,185 @@ export async function getClickDetails(
   // Resolve product and retailer names
   const medIds = [...new Set(data.map((r) => r.medication_id as number))];
   const retIds = [...new Set(data.map((r) => r.retailer_id as number))];
+  const sessionIds = [
+    ...new Set(
+      data
+        .map((r) => r.session_id as string | null)
+        .filter((s): s is string => !!s)
+    ),
+  ];
 
-  const [{ data: meds }, { data: rets }] = await Promise.all([
-    admin.from("medications").select("id, name").in("id", medIds),
-    admin.from("retailers").select("id, name").in("id", retIds),
-  ]);
+  const [{ data: meds }, { data: rets }, { data: sessionViews }] =
+    await Promise.all([
+      admin.from("medications").select("id, name, slug").in("id", medIds),
+      admin.from("retailers").select("id, name").in("id", retIds),
+      sessionIds.length > 0
+        ? admin
+            .from("page_views")
+            .select("session_id, country, city, referrer, path, created_at")
+            .in("session_id", sessionIds)
+            .order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as unknown[] }),
+    ]);
 
-  const medMap = new Map((meds ?? []).map((m) => [m.id as number, m.name as string]));
-  const retMap = new Map((rets ?? []).map((r) => [r.id as number, r.name as string]));
+  const medMap = new Map(
+    (meds ?? []).map((m) => [
+      m.id as number,
+      { name: m.name as string, slug: (m.slug as string) ?? null },
+    ])
+  );
+  const retMap = new Map(
+    (rets ?? []).map((r) => [r.id as number, r.name as string])
+  );
 
-  const rows: ClickDetail[] = data.map((r) => ({
-    id: r.id as number,
-    productName: medMap.get(r.medication_id as number) ?? `#${r.medication_id}`,
-    retailerName: retMap.get(r.retailer_id as number) ?? `#${r.retailer_id}`,
-    referrerType: (r.referrer_type as string) ?? "unknown",
-    clickedAt: r.clicked_at as string,
-  }));
+  // Per session, collect the most recent page_view BEFORE the click and the
+  // earliest referrer domain (best hint at the original traffic source).
+  interface SessionCtx {
+    country: string | null;
+    city: string | null;
+    referrerHost: string | null;
+    fromPath: string | null;
+  }
+  const sessionCtx = new Map<string, SessionCtx>();
+  for (const v of (sessionViews ?? []) as Array<{
+    session_id: string;
+    country: string | null;
+    city: string | null;
+    referrer: string | null;
+    path: string | null;
+  }>) {
+    const sid = v.session_id;
+    if (!sid) continue;
+    const ctx = sessionCtx.get(sid) ?? {
+      country: null,
+      city: null,
+      referrerHost: null,
+      fromPath: null,
+    };
+    // First (most recent, because ordered desc) becomes fromPath
+    if (!ctx.fromPath && v.path) ctx.fromPath = v.path;
+    // Any non-null country/city wins — geolocation is stable within a session
+    if (!ctx.country && v.country) ctx.country = v.country;
+    if (!ctx.city && v.city) ctx.city = v.city;
+    // External referrer host (first external one we see)
+    const host = referrerHost(v.referrer);
+    if (!ctx.referrerHost && host) ctx.referrerHost = host;
+    sessionCtx.set(sid, ctx);
+  }
+
+  const rows: ClickDetail[] = data
+    .map((r) => {
+      const med = medMap.get(r.medication_id as number);
+      const sid = r.session_id as string | null;
+      const ctx = sid ? sessionCtx.get(sid) : null;
+      return {
+        id: r.id as number,
+        productName: med?.name ?? `#${r.medication_id}`,
+        productSlug: med?.slug ?? null,
+        retailerName:
+          retMap.get(r.retailer_id as number) ?? `#${r.retailer_id}`,
+        referrerType: (r.referrer_type as string) ?? "unknown",
+        clickedAt: r.clicked_at as string,
+        country: ctx?.country ?? null,
+        city: ctx?.city ?? null,
+        referrerHost: ctx?.referrerHost ?? null,
+        fromPath: ctx?.fromPath ?? null,
+      };
+    })
+    // Exclude admin self-clicks (city match). purchase_click_events has no
+    // country/city directly, so we can only filter after the session enrichment.
+    .filter((r) => r.city !== ADMIN_EXCLUDE_CITY);
 
   return { data: rows, total: count ?? 0 };
+}
+
+// ── Top referrers (external traffic sources) ───────────────
+
+export interface TopReferrer {
+  host: string;
+  visitors: number;
+}
+
+function referrerHost(ref: string | null | undefined): string | null {
+  if (!ref) return null;
+  try {
+    const u = new URL(ref);
+    const host = u.hostname.replace(/^www\./, "").toLowerCase();
+    // Skip internal self-referrals
+    if (host.endsWith("aipharmcare.com") || host === "localhost") return null;
+    return host;
+  } catch {
+    return null;
+  }
+}
+
+export async function getTopReferrers(
+  from: string,
+  to: string
+): Promise<TopReferrer[]> {
+  const admin = createAdminClient();
+  const fromStart = from + "T00:00:00.000Z";
+  const toEnd = to + "T23:59:59.999Z";
+
+  const { data } = await admin
+    .from("page_views")
+    .select("visitor_id, referrer")
+    .gte("created_at", fromStart)
+    .lte("created_at", toEnd)
+    .not("referrer", "is", null)
+    .or(EXCLUDE_ADMIN_CITY_FILTER);
+
+  const byHost = new Map<string, Set<string>>();
+  for (const r of data ?? []) {
+    const host = referrerHost(r.referrer as string);
+    if (!host) continue;
+    if (!byHost.has(host)) byHost.set(host, new Set());
+    byHost.get(host)!.add(r.visitor_id as string);
+  }
+  return [...byHost.entries()]
+    .map(([host, vs]) => ({ host, visitors: vs.size }))
+    .sort((a, b) => b.visitors - a.visitors)
+    .slice(0, 10);
+}
+
+// ── Top entry pages (first page a visitor lands on) ────────
+
+export interface TopEntryPage {
+  path: string;
+  visitors: number;
+}
+
+export async function getTopEntryPages(
+  from: string,
+  to: string
+): Promise<TopEntryPage[]> {
+  const admin = createAdminClient();
+  const fromStart = from + "T00:00:00.000Z";
+  const toEnd = to + "T23:59:59.999Z";
+
+  // Chronological fetch so per-visitor first-seen path wins
+  const { data } = await admin
+    .from("page_views")
+    .select("visitor_id, path, created_at")
+    .gte("created_at", fromStart)
+    .lte("created_at", toEnd)
+    .or(EXCLUDE_ADMIN_CITY_FILTER)
+    .order("created_at", { ascending: true })
+    .limit(10000);
+
+  const firstPathByVisitor = new Map<string, string>();
+  for (const r of data ?? []) {
+    const vid = r.visitor_id as string;
+    if (!firstPathByVisitor.has(vid)) {
+      firstPathByVisitor.set(vid, r.path as string);
+    }
+  }
+  const pathCounts = new Map<string, number>();
+  for (const path of firstPathByVisitor.values()) {
+    pathCounts.set(path, (pathCounts.get(path) ?? 0) + 1);
+  }
+  return [...pathCounts.entries()]
+    .map(([path, visitors]) => ({ path, visitors }))
+    .sort((a, b) => b.visitors - a.visitors)
+    .slice(0, 10);
 }
