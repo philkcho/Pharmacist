@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, MessageCircleQuestion, Users, UserPlus } from "lucide-react";
+import { FileText, MessageCircleQuestion, Users, UserPlus, Sparkles } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { DashboardAnalytics } from "./dashboard-analytics";
 
@@ -11,7 +11,7 @@ async function getDashboardStats() {
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
   const sevenDaysAgoIso = sevenDaysAgo.toISOString();
 
-  const [drsAnalysis, publicConsults, usersTotalRes, usersAllRes] =
+  const [drsAnalysis, publicConsults, trendingArticles, usersTotalRes, usersAllRes] =
     await Promise.all([
       // Dr.'s Analysis surfaced on homepage = published expert_picks
       admin
@@ -23,6 +23,11 @@ async function getDashboardStats() {
         .from("consults")
         .select("id", { count: "exact", head: true })
         .eq("visibility", "public"),
+      // Trending articles surfaced on homepage Worth the Hype = published trend_topics
+      admin
+        .from("trend_topics")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "published"),
       // Total registered users via auth admin API — perPage:1 just to get `total`
       admin.auth.admin.listUsers({ page: 1, perPage: 1 }),
       // All users so we can count recent signups in-memory
@@ -45,6 +50,7 @@ async function getDashboardStats() {
   return {
     drsAnalysisCount: drsAnalysis.count ?? 0,
     publicConsultCount: publicConsults.count ?? 0,
+    trendingArticleCount: trendingArticles.count ?? 0,
     totalUsers,
     newUsers,
   };
@@ -58,7 +64,7 @@ export default async function DashboardPage() {
       <h1 className="text-2xl font-bold">Dashboard</h1>
 
       {/* Content + audience stats */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <StatCard
           title="Dr.'s Analysis"
           value={stats.drsAnalysisCount}
@@ -72,6 +78,12 @@ export default async function DashboardPage() {
           icon={
             <MessageCircleQuestion className="h-4 w-4 text-muted-foreground" />
           }
+        />
+        <StatCard
+          title="Articles"
+          value={stats.trendingArticleCount}
+          sub="Worth the Hype"
+          icon={<Sparkles className="h-4 w-4 text-muted-foreground" />}
         />
         <StatCard
           title="Registered Users"
