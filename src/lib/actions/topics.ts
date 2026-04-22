@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { SAMPLE_PRODUCTS } from "@/lib/data/sample-products";
 import { autoGeneratePurchaseLinks } from "@/lib/actions/purchase-links";
 import { ensureProductComplete } from "@/lib/actions/ensure-product-complete";
+import { iherbSearchUrl } from "@/lib/affiliate/iherb";
 
 export interface TopicProduct {
   id: number;
@@ -65,7 +66,7 @@ export interface TopicPageData {
 
 const RETAILER_SEARCH_TEMPLATES: Record<string, (q: string) => string> = {
   amazon: (q) => `https://www.amazon.com/s?k=${encodeURIComponent(q)}`,
-  iherb: (q) => `https://www.iherb.com/search?kw=${encodeURIComponent(q)}`,
+  iherb: (q) => iherbSearchUrl(q),
   stylekorean: (q) =>
     `https://www.stylekorean.com/shop/search/result.php?search_str=${encodeURIComponent(q)}`,
   yesstyle: (q) =>

@@ -1,6 +1,7 @@
 "use server";
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { iherbSearchUrl } from "@/lib/affiliate/iherb";
 
 /**
  * Auto-generate search-based purchase links for a product across
@@ -43,8 +44,7 @@ const RETAILER_SEARCH_URLS: RetailerSearchConfig[] = [
   },
   {
     slug: "iherb",
-    buildSearchUrl: (name) =>
-      `https://www.iherb.com/search?kw=${encodeURIComponent(name)}`,
+    buildSearchUrl: (name) => iherbSearchUrl(name),
   },
   {
     slug: "stylekorean",

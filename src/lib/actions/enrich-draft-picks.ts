@@ -8,6 +8,7 @@
  */
 
 import { createAdminClient } from "@/lib/supabase/admin";
+import { iherbSearchUrl } from "@/lib/affiliate/iherb";
 
 export interface DraftPickEnrichment {
   name: string;
@@ -34,7 +35,7 @@ export async function enrichDraftProductPicks(
   return Promise.all(
     picks.map(async (p) => {
       const amazon = `https://www.amazon.com/s?k=${encodeURIComponent(p.name)}`;
-      const iherb = `https://www.iherb.com/search?kw=${encodeURIComponent(p.name)}`;
+      const iherb = iherbSearchUrl(p.name);
       const base: DraftPickEnrichment = {
         name: p.name,
         reason: p.reason,

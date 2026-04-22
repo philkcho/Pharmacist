@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { NextResponse } from "next/server";
 import { headers } from "next/headers";
 import crypto from "crypto";
+import { withIherbAffiliate } from "@/lib/affiliate/iherb";
 
 /**
  * Purchase link click-through tracker.
@@ -82,7 +83,10 @@ export async function GET(
       }
     });
 
-  // Redirect to affiliate URL (preferred) or raw product URL
-  const redirectUrl = link.affiliate_url ?? link.url;
+  // Redirect to affiliate URL (preferred) or raw product URL.
+  // iHerb URLs get the Rewards rcode appended automatically so even
+  // previously-stored product links earn commission.
+  const rawRedirect = link.affiliate_url ?? link.url;
+  const redirectUrl = withIherbAffiliate(rawRedirect);
   return NextResponse.redirect(redirectUrl, 302);
 }
