@@ -42,9 +42,12 @@ interface ConsultSidebarProps {
 export function ConsultSidebar({ userEmail }: ConsultSidebarProps) {
   const pathname = usePathname();
 
-  // Hide on consult pages where the form is the primary content
+  // Show only on the homepage. Sub-pages (trending / expert / analysis /
+  // consult / ask / about ...) hide the rail to avoid the heavy form
+  // competing with article/product content.
   const pathWithoutLocale = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "");
-  if (pathWithoutLocale.startsWith("/consult")) {
+  const isHome = pathWithoutLocale === "" || pathWithoutLocale === "/";
+  if (!isHome) {
     return null;
   }
 
