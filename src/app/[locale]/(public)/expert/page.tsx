@@ -5,7 +5,7 @@ import { ExpertPickCard } from "@/components/expert/expert-pick-card";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Dr.'s Analysis | Dr.pharmacist",
+  title: "Dr.'s Analysis | AI PharmCare",
   description:
     "Expert health & beauty videos analyzed and summarized by pharmacists. Key insights and product recommendations you can trust.",
   alternates: { canonical: "/expert" },

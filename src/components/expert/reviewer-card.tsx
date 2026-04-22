@@ -55,7 +55,7 @@ export function ReviewerCard({
             {SITE_AUTHOR.name}
           </p>
           <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-            Reviews every article and product analysis on Dr.pharmacist for
+            Reviews every article and product analysis on AI PharmCare for
             accuracy against FDA labeling, peer-reviewed literature, and
             current pharmacy practice. AI-assisted drafts are not published
             without this review step.

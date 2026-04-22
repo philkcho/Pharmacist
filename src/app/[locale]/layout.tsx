@@ -5,6 +5,8 @@ import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { PageTracker } from "@/components/analytics/page-tracker";
 import { OrganizationJsonLd } from "@/components/seo/json-ld";
+import { BRAND } from "@/lib/brand";
+import { SITE_AUTHOR } from "@/lib/author";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -17,30 +19,26 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
-
 export const metadata: Metadata = {
   title: {
-    default: "Dr.pharmacist — Expert OTC Medication Recommendations",
-    template: "%s | Dr.pharmacist",
+    default: `${BRAND.name} — Evidence-Based Health & Beauty Analysis`,
+    template: `%s | ${BRAND.name}`,
   },
-  description:
-    "Pharmacist-reviewed health & beauty analysis. Evidence-based product reviews, ingredient breakdowns, and safety data from FDA, PubMed, and FAERS.",
-  metadataBase: new URL(SITE_URL),
-  applicationName: "Dr.pharmacist",
-  authors: [{ name: "Dr.pharmacist" }],
+  description: BRAND.shortDescription,
+  metadataBase: new URL(BRAND.url),
+  applicationName: BRAND.name,
+  authors: [{ name: SITE_AUTHOR.displayName }],
   openGraph: {
     type: "website",
     locale: "en_US",
-    siteName: "Dr.pharmacist",
-    title: "Dr.pharmacist — Evidence-Based Health & Beauty Analysis",
-    description:
-      "Pharmacist-reviewed product analysis backed by FDA data, clinical research, and ingredient science.",
-    url: SITE_URL,
+    siteName: BRAND.name,
+    title: `${BRAND.name} — Evidence-Based Health & Beauty Analysis`,
+    description: BRAND.shortDescription,
+    url: BRAND.url,
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dr.pharmacist",
+    title: BRAND.name,
     description:
       "We read the science so you don't have to. Pharmacist-reviewed health & beauty analysis.",
   },

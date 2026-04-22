@@ -32,7 +32,7 @@ export async function generateMetadata({
   const decoded = decodeURIComponent(keyword).replace(/-/g, " ");
   const title = decoded.charAt(0).toUpperCase() + decoded.slice(1);
   return {
-    title: `${title} — Products & Analysis — Dr.pharmacist`,
+    title: `${title} — Products & Analysis — AI PharmCare`,
     description: `Explore ${title}: pharmacist-analyzed products, ingredient details, and where to buy from Amazon, iHerb, StyleKorean.`,
     alternates: { canonical: `/topics/${keyword}` },
   };

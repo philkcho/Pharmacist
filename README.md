@@ -1,6 +1,11 @@
-# Dr.pharmacist
+# AI PharmCare
 
-약사가 OTC(일반의약품)를 분야별로 분석하여 추천 기사를 게시하는 영어 웹사이트.
+Health & Beauty 트렌드를 AI로 분석하고 라이선스를 보유한 약사(Dr. Younghun Cho, PharmD)가 검토하여 관련 제품 구매로 연결하는 영어 웹사이트. 도메인: `aipharmcare.com`.
+
+## 환경변수
+
+- `NEXT_PUBLIC_SITE_NAME=AI PharmCare` — 브랜드명 (기본값 `AI PharmCare`, `src/lib/brand.ts` 참조)
+- `NEXT_PUBLIC_SITE_URL=https://www.aipharmcare.com` — 프로덕션 URL
 
 ## 기술 스택
 

@@ -9,6 +9,10 @@
 
 export const SITE_AUTHOR = {
   name: "Younghun Cho",
+  honorific: "Dr.",
+  credentials: "PharmD",
+  displayName: "Dr. Younghun Cho, PharmD",
+  shortDisplayName: "Dr. Cho",
   email: "philkucho@gmail.com",
   // Retained for JSON-LD sameAs only — not rendered in UI anymore.
   linkedinUrl: "https://www.linkedin.com/in/younghun-cho-71b36a241/",
@@ -24,6 +28,8 @@ export function authorPersonSchema() {
     "@type": "Person",
     "@id": `${SITE_URL}/about#author`,
     name: SITE_AUTHOR.name,
+    honorificPrefix: SITE_AUTHOR.honorific,
+    honorificSuffix: SITE_AUTHOR.credentials,
     url: `${SITE_URL}/about`,
     sameAs: [SITE_AUTHOR.linkedinUrl],
   };

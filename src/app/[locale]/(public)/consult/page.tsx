@@ -12,7 +12,7 @@ import type { ConsultDraft } from "@/lib/ai/draft-consult";
 import type { ArticleReference } from "@/lib/references/fetch-references";
 
 export const metadata: Metadata = {
-  title: "My Questions — Dr.pharmacist",
+  title: "My Questions — AI PharmCare",
   description: "Your pharmacist consult history and answers.",
   alternates: { canonical: "/consult" },
   robots: { index: false, follow: false },

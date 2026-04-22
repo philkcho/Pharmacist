@@ -4,7 +4,7 @@ import { PersonalConsultHero } from "@/components/home/personal-consult-hero";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
-  title: "Personal Consult — Dr.pharmacist",
+  title: "Personal Consult — AI PharmCare",
   description:
     "Pharmacist-reviewed personal consult. Share your stack, get cross-checked guidance from a licensed pharmacist within 48 hours.",
   alternates: { canonical: "/consult/new" },

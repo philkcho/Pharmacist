@@ -576,7 +576,7 @@ export default function EditArticlePage() {
                       className="h-4 w-4"
                     />
                     <Label htmlFor={`recommended-${i}`} className="text-sm">
-                      Recommended by Dr.pharmacist
+                      Recommended by AI PharmCare
                     </Label>
                   </div>
                 </div>

@@ -4,7 +4,7 @@ import { z } from "zod";
 
 // Shared voice rule snippet — keep descriptions concise but unmistakable.
 const VOICE_RULE =
-  "Write as Dr.pharmacist's own research. No video/speaker/channel references. No 'overseas/foreign/imported' framing (US audience). See system rules.";
+  "Write as AI PharmCare's own research. No video/speaker/channel references. No 'overseas/foreign/imported' framing (US audience). See system rules.";
 
 const expertVideoSchema = z.object({
   title: z
@@ -35,7 +35,7 @@ const expertVideoSchema = z.object({
     .min(3)
     .max(5)
     .describe(
-      `3-5 actionable bullet points as Dr.pharmacist's own recommendations. ${VOICE_RULE}`
+      `3-5 actionable bullet points as AI PharmCare's own recommendations. ${VOICE_RULE}`
     ),
   cleanTranscript: z
     .string()
@@ -54,7 +54,7 @@ const expertVideoSchema = z.object({
     .min(3)
     .max(6)
     .describe(
-      `Dr.pharmacist's structured research notes (heading + bullets). ${VOICE_RULE}`
+      `AI PharmCare's structured research notes (heading + bullets). ${VOICE_RULE}`
     ),
   analysisSections: z
     .array(
@@ -72,7 +72,7 @@ const expertVideoSchema = z.object({
       })
     )
     .describe(
-      `Main article body, written as Dr.pharmacist's original editorial. ${VOICE_RULE}`
+      `Main article body, written as AI PharmCare's original editorial. ${VOICE_RULE}`
     ),
   mentionedProducts: z
     .array(
@@ -111,9 +111,9 @@ export async function analyzeExpertVideo(
 ): Promise<ExpertVideoAnalysis> {
   const trimmed = transcript.slice(0, 10000);
 
-  const prompt = `You are a staff pharmacist at Dr.pharmacist (a US health & beauty research site for 20-30 year old Americans) writing an ORIGINAL research article.
+  const prompt = `You are a staff pharmacist at AI PharmCare (a US health & beauty research site for 20-30 year old Americans) writing an ORIGINAL research article.
 
-The transcript below is ONE source of information. Your job is to publish Dr.pharmacist-voiced content — NOT a video recap.
+The transcript below is ONE source of information. Your job is to publish AI PharmCare-voiced content — NOT a video recap.
 
 ${originalTitle ? `Source reference (do NOT mention in any body text): "${originalTitle}"` : ""}
 
@@ -123,7 +123,7 @@ EXCEPT \`cleanTranscript\`
 =============================================
 
 RULE 1 — NO VIDEO / SPEAKER / CHANNEL REFERENCES
-The reader must have NO IDEA this came from a video. Write as Dr.pharmacist's own research.
+The reader must have NO IDEA this came from a video. Write as AI PharmCare's own research.
 
 Forbidden phrases include (but are not limited to):
 - "In this video/guide/episode..."
@@ -137,7 +137,7 @@ Forbidden phrases include (but are not limited to):
 - "He shares..." / "She demonstrates..."
 
 Use instead:
-- "Dr.pharmacist recommends..."
+- "AI PharmCare recommends..."
 - "Our research shows..."
 - "The evidence suggests..."
 - "We found..."

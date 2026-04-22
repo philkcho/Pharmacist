@@ -531,7 +531,7 @@ function RequestReviewButton({
           <DialogTitle>Request pharmacist review</DialogTitle>
           <DialogDescription>
             Ask a licensed pharmacist to review <strong>“{queryText}”</strong> and
-            add it to Dr.pharmacist. Email is optional — we&apos;ll only use it to
+            add it to AI PharmCare. Email is optional — we&apos;ll only use it to
             notify you when the review is ready.
           </DialogDescription>
         </DialogHeader>

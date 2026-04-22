@@ -1,7 +1,9 @@
 {
   "site": {
-    "name": "Dr.pharmacist",
-    "description": "Expert pharmacist recommendations for over-the-counter medications"
+    "name": "AI PharmCare",
+    "legalName": "AI PharmCare",
+    "description": "Evidence-based health & beauty analysis, reviewed by licensed pharmacists",
+    "tagline": "We read the science so you don't have to"
   },
   "nav": {
     "home": "Home",
@@ -11,7 +13,7 @@
   },
   "footer": {
     "disclaimer": "The information on this website is for educational purposes only and is not a substitute for professional medical advice. Always consult your healthcare provider or pharmacist before starting any new medication.",
-    "copyright": "© {year} Dr.pharmacist. All rights reserved."
+    "copyright": "© {year} AI PharmCare. All rights reserved."
   },
   "articles": {
     "readMore": "Read More",

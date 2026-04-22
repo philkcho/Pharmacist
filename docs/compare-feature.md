@@ -660,7 +660,7 @@ output schema (zod):
 ### 12.2 태그라인 후보 (A/B 테스트 가능)
 
 - "OTC comparisons you can actually trust."
-- "Dr.pharmacist — source-linked, ad-free rankings."
+- "AI PharmCare — source-linked, ad-free rankings."
 - "No paid rankings. Just sources."
 - "Every claim, sourced to FDA and PubMed."
 

@@ -30,7 +30,7 @@ export function ExpertPickCard({
       href={`/expert/${slug}`}
       className="group flex flex-col overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/30 hover:shadow-md"
     >
-      {/* Cover — real topic photo if present, else category-gradient Dr.pharmacist cover */}
+      {/* Cover — real topic photo if present, else category-gradient AI PharmCare cover */}
       <div className="relative aspect-[16/10] w-full overflow-hidden">
         {thumbnailUrl ? (
           <Image

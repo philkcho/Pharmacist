@@ -38,7 +38,7 @@ function LoginInner() {
           <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Pill className="h-6 w-6 text-primary" />
           </div>
-          <CardTitle className="text-xl">Dr.pharmacist</CardTitle>
+          <CardTitle className="text-xl">AI PharmCare</CardTitle>
           <p className="mt-1 text-sm text-muted-foreground">
             Sign in to send your question to a licensed pharmacist.
           </p>

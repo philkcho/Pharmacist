@@ -30,9 +30,9 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const data = await getOrGenerateIngredientGuide(slug);
-  if (!data) return { title: "Ingredient not found — Dr.pharmacist" };
+  if (!data) return { title: "Ingredient not found — AI PharmCare" };
 
-  const title = `${data.name} — What It Is, Benefits & Uses | Dr.pharmacist`;
+  const title = `${data.name} — What It Is, Benefits & Uses | AI PharmCare`;
   const description = data.article.hook.slice(0, 160);
   const url = `${SITE_URL}/ingredients/${slug}`;
 
@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url,
       type: "article",
-      siteName: "Dr.pharmacist",
+      siteName: "AI PharmCare",
       locale: "en_US",
     },
     twitter: {

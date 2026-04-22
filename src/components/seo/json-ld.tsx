@@ -4,8 +4,9 @@
  */
 
 import { SITE_AUTHOR, authorPersonSchema } from "@/lib/author";
+import { BRAND } from "@/lib/brand";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
+const SITE_URL = BRAND.url;
 
 // ── Organization (site-wide) ────────────────────────────────
 
@@ -13,10 +14,9 @@ export function OrganizationJsonLd() {
   const data = {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: "Dr.pharmacist",
+    name: BRAND.legalName,
     url: SITE_URL,
-    description:
-      "Pharmacist-reviewed health & beauty analysis backed by FDA data, clinical research, and ingredient science.",
+    description: BRAND.shortDescription,
   };
 
   return (
@@ -53,7 +53,7 @@ export function ArticleJsonLd({
     url,
     publisher: {
       "@type": "Organization",
-      name: "Dr.pharmacist",
+      name: BRAND.legalName,
       url: SITE_URL,
     },
     author: person,
@@ -139,7 +139,7 @@ export function ProductReviewJsonLd({
       author: authorPersonSchema(),
       publisher: {
         "@type": "Organization",
-        name: "Dr.pharmacist",
+        name: BRAND.legalName,
         url: SITE_URL,
       },
       reviewRating: {

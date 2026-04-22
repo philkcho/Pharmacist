@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const result = streamText({
     model: google("gemini-2.5-pro"),
     maxRetries: 0,
-    system: `You are a licensed pharmacist (PharmD) editing an OTC medication recommendation article for a health website called "Dr.pharmacist."
+    system: `You are a licensed pharmacist (PharmD) editing an OTC medication recommendation article for a health website called "AI PharmCare."
 
 Your task: apply the user's instruction to modify or enhance the existing article content.
 

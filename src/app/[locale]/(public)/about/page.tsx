@@ -6,9 +6,9 @@ import { SITE_AUTHOR, authorPersonSchema } from "@/lib/author";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 export const metadata: Metadata = {
-  title: "About — Dr.pharmacist",
+  title: "About — AI PharmCare",
   description:
-    "Learn about Dr.pharmacist — pharmacist-reviewed health & beauty analysis backed by FDA data, clinical research, and ingredient science.",
+    "Learn about AI PharmCare — pharmacist-reviewed health & beauty analysis backed by FDA data, clinical research, and ingredient science.",
   alternates: { canonical: `${SITE_URL}/about` },
 };
 
@@ -36,7 +36,7 @@ export default function AboutPage() {
         <div className="flex items-center justify-center gap-2">
           <Pill className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Dr.pharmacist
+            AI PharmCare
           </h1>
         </div>
         <p className="mt-4 text-lg text-muted-foreground">
@@ -53,7 +53,7 @@ export default function AboutPage() {
           lists are confusing, and it&apos;s hard to know what actually works.
         </p>
         <p className="mt-3 leading-relaxed text-muted-foreground">
-          Dr.pharmacist exists to cut through the noise. We combine{" "}
+          AI PharmCare exists to cut through the noise. We combine{" "}
           <strong className="text-foreground">pharmacist expertise</strong>,{" "}
           <strong className="text-foreground">FDA data</strong>, and{" "}
           <strong className="text-foreground">peer-reviewed research</strong>{" "}
@@ -68,7 +68,7 @@ export default function AboutPage() {
         <div className="mt-5">
           <h3 className="text-lg font-semibold">{SITE_AUTHOR.name}</h3>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Every article and product analysis on Dr.pharmacist is reviewed for
+            Every article and product analysis on AI PharmCare is reviewed for
             accuracy against FDA labeling, peer-reviewed literature, and current
             pharmacy practice. AI-assisted drafts are not published without this
             review step.

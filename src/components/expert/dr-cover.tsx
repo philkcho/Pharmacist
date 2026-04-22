@@ -1,6 +1,6 @@
 /**
- * Dr.pharmacist branded cover — used as thumbnail for all Dr.'s Analysis content.
- * Makes every analysis look like it came from the Dr.pharmacist brand.
+ * AI PharmCare branded cover — used as thumbnail for all Dr.'s Analysis content.
+ * Makes every analysis look like it came from the AI PharmCare brand.
  * Shows ONLY the brand (title is shown separately in the card below).
  */
 
@@ -39,7 +39,7 @@ export function DrCover({ category, className = "" }: DrCoverProps) {
         <div className="flex items-center gap-2">
           <Pill className="h-7 w-7 text-primary" />
           <span className="text-lg font-bold tracking-tight text-primary">
-            Dr.pharmacist
+            AI PharmCare
           </span>
         </div>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">

@@ -124,7 +124,7 @@ export function ChatWidget() {
         <button
           onClick={() => setOpen(true)}
           className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
-          aria-label="Ask Dr.pharmacist"
+          aria-label="Ask PharmCare"
         >
           <MessageCircle className="h-6 w-6" />
         </button>
@@ -141,7 +141,7 @@ export function ChatWidget() {
               </div>
               <div>
                 <h3 className="text-sm font-semibold text-primary-foreground">
-                  Ask Dr.pharmacist
+                  Ask PharmCare
                 </h3>
                 <p className="text-[11px] text-primary-foreground/70">
                   AI-powered health &amp; beauty advice
@@ -179,7 +179,7 @@ export function ChatWidget() {
                     <Pill className="h-6 w-6 text-primary" />
                   </div>
                   <p className="text-sm font-medium">
-                    Hi! I&apos;m Dr.pharmacist
+                    Hi! I&apos;m your PharmCare assistant
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
                     Ask me anything about medications, skincare, or supplements

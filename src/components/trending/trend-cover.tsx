@@ -1,5 +1,5 @@
 /**
- * Dr.pharmacist branded cover — fallback thumbnail for trending articles
+ * AI PharmCare branded cover — fallback thumbnail for trending articles
  * that have no imageUrl. Mirrors DrCover styling so "Worth the Hype?"
  * cards look consistent with Dr.'s Analysis cards.
  */
@@ -39,7 +39,7 @@ export function TrendCover({ category, className = "" }: TrendCoverProps) {
         <div className="flex items-center gap-2">
           <Sparkles className="h-7 w-7 text-primary" />
           <span className="text-lg font-bold tracking-tight text-primary">
-            Dr.pharmacist
+            AI PharmCare
           </span>
         </div>
         <p className="mt-2 text-[10px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">

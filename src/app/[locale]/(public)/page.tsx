@@ -26,7 +26,7 @@ import type { ConsultDraft } from "@/lib/ai/draft-consult";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 export const metadata: Metadata = {
-  title: "Dr.pharmacist — Pharmacist-Reviewed Supplements, OTC & Skincare",
+  title: "AI PharmCare — Pharmacist-Reviewed Supplements, OTC & Skincare",
   description:
     "Real pharmacist analysis of trending supplements, OTC medications, and skincare. Backed by FDA data, PubMed research, and ingredient science. Is it worth the hype? We read the science so you don't have to.",
   keywords: [
@@ -40,17 +40,17 @@ export const metadata: Metadata = {
   ],
   alternates: { canonical: `${SITE_URL}/` },
   openGraph: {
-    title: "Dr.pharmacist — Pharmacist-Reviewed Health & Beauty Analysis",
+    title: "AI PharmCare — Pharmacist-Reviewed Health & Beauty Analysis",
     description:
       "Real pharmacist analysis of trending products. FDA data + PubMed research + ingredient science. Find out what's worth the hype.",
     url: `${SITE_URL}/`,
     type: "website",
-    siteName: "Dr.pharmacist",
+    siteName: "AI PharmCare",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Dr.pharmacist — Is It Worth the Hype?",
+    title: "AI PharmCare — Is It Worth the Hype?",
     description:
       "Pharmacist-reviewed supplements, OTC meds, and skincare. Science-backed answers.",
   },
@@ -73,7 +73,7 @@ export default async function Home() {
           <div className="flex items-center justify-center gap-2">
             <Pill className="h-8 w-8 text-primary" />
             <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Dr.pharmacist
+              AI PharmCare
             </h1>
           </div>
           <p className="mt-3 text-lg text-muted-foreground">
@@ -211,7 +211,7 @@ function TrendCard({ trend }: { trend: TrendTopicRow & { headline?: string | nul
       href={`/trending/${trend.slug}`}
       className="group block overflow-hidden rounded-lg border transition-all hover:border-primary/30 hover:shadow-md"
     >
-      {/* Cover — real photo if present, else branded Dr.pharmacist cover */}
+      {/* Cover — real photo if present, else branded AI PharmCare cover */}
       <div className="relative aspect-[16/9] w-full overflow-hidden bg-muted">
         {trend.imageUrl ? (
           <img

@@ -11,7 +11,7 @@ import {
 } from "@/lib/actions/medications";
 
 export const metadata: Metadata = {
-  title: "Compare Products | Dr.pharmacist",
+  title: "Compare Products | AI PharmCare",
   description:
     "Browse product categories and compare pharmacist-reviewed supplements, OTC medications, and skincare.",
   alternates: { canonical: "/compare" },

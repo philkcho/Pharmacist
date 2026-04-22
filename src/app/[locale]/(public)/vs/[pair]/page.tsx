@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const result = await getOrGenerateComparison(pair);
 
   if (result.kind !== "ok") {
-    return { title: "Comparison not found — Dr.pharmacist" };
+    return { title: "Comparison not found — AI PharmCare" };
   }
 
   const { productA, productB, article } = result.data;
@@ -49,7 +49,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url,
       type: "article",
-      siteName: "Dr.pharmacist",
+      siteName: "AI PharmCare",
       locale: "en_US",
     },
     twitter: {

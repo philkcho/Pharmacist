@@ -132,7 +132,7 @@ export function PersonalConsultHero({ userEmail }: PersonalConsultHeroProps) {
         <div className="flex items-center justify-center gap-2">
           <Pill className="h-8 w-8 text-primary" />
           <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-            Dr.pharmacist
+            AI PharmCare
           </h1>
         </div>
 
@@ -152,7 +152,7 @@ export function PersonalConsultHero({ userEmail }: PersonalConsultHeroProps) {
           <div className="rounded-2xl border bg-card p-4 shadow-sm">
             <div className="flex items-center gap-2 text-sm font-medium text-primary">
               <Pill className="h-4 w-4" />
-              Dr.pharmacist
+              AI PharmCare
             </div>
             <p className="mt-1 text-sm text-muted-foreground">
               What are you taking, or what symptoms do you have? Snap a photo of

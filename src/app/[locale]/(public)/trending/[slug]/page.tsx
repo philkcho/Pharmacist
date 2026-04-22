@@ -183,7 +183,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
         ]}
       />
 
-      {/* Full-bleed hero — real photo or branded Dr.pharmacist cover */}
+      {/* Full-bleed hero — real photo or branded AI PharmCare cover */}
       <ArticleHero
         title={heroTitle}
         category={topic.category}
@@ -335,7 +335,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
                 ))}
               </div>
               <p className="mt-1 text-xs text-muted-foreground">
-                Dr.pharmacist may earn a commission from purchases made through
+                AI PharmCare may earn a commission from purchases made through
                 these links.
               </p>
             </div>

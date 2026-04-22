@@ -240,7 +240,7 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
                   Products Mentioned
                 </SectionHeading>
                 <p className="mb-5 text-sm text-muted-foreground">
-                  Analyzed by Dr.pharmacist — tap through for the ingredient
+                  Analyzed by AI PharmCare — tap through for the ingredient
                   breakdown or shop across retailers.
                 </p>
                 <div className="grid gap-4 sm:grid-cols-2">

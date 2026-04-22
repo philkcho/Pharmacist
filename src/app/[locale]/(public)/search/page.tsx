@@ -20,7 +20,7 @@ export async function generateMetadata({
 }: SearchPageProps): Promise<Metadata> {
   const { q } = await searchParams;
   return {
-    title: q ? `"${q}" — Search — Dr.pharmacist` : "Search — Dr.pharmacist",
+    title: q ? `"${q}" — Search — AI PharmCare` : "Search — AI PharmCare",
     alternates: { canonical: "/search" },
     robots: { index: false, follow: true },
   };
@@ -34,7 +34,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12 text-center sm:px-6">
         <Search className="mx-auto h-12 w-12 text-muted-foreground/50" />
-        <h1 className="mt-4 text-2xl font-bold">Search Dr.pharmacist</h1>
+        <h1 className="mt-4 text-2xl font-bold">Search AI PharmCare</h1>
         <p className="mt-2 text-muted-foreground">
           Enter a keyword above to find trending topics and products.
         </p>

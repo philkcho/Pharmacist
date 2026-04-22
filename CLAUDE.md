@@ -1,8 +1,8 @@
 @AGENTS.md
 
-# Dr.pharmacist 프로젝트
+# AI PharmCare 프로젝트
 
-Health & Beauty 트렌드를 AI로 분석하고, 약사가 검토하며, 관련 제품 구매로 연결하는 영어 웹사이트.
+Health & Beauty 트렌드를 AI로 분석하고, 라이선스를 보유한 약사(Dr. Younghun Cho, PharmD)가 검토하며, 관련 제품 구매로 연결하는 영어 웹사이트. 도메인: `aipharmcare.com`. 브랜드명/URL/tagline 등 상수는 `src/lib/brand.ts` 참조. 이전 브랜드 `Dr.pharmacist` 는 2026-04-22 리브랜드됨.
 
 ## 기술 스택
 - **프레임워크:** Next.js 16 (App Router)
@@ -36,7 +36,7 @@ Health & Beauty 트렌드를 AI로 분석하고, 약사가 검토하며, 관련 
 ├── 검색바 (히어로 + 헤더 상시)
 ├── Worth the Hype? — 최신 트렌드 아티클 3개 (카드, 클릭 유도 headline)
 │   └── 클릭 → /trending/[slug] 아티클 상세
-├── Dr.'s Analysis — YouTube 기반 Dr.pharmacist 자체 연구 아티클 3개
+├── Dr.'s Analysis — YouTube 기반 AI PharmCare 자체 연구 아티클 3개
 │   └── 클릭 → /expert/[slug] 상세
 ├── What Are You Looking For? — Health/Beauty 토픽 카드
 │   └── 클릭 → /topics/[keyword]
@@ -187,7 +187,7 @@ medications ↔ retailers 정규화 조인. url, affiliateUrl, price.
 클릭 추적 로그. `/api/click/[linkId]` 경유 302 리다이렉트.
 
 ### expert_picks
-Dr.'s Analysis — YouTube 트랜스크립트를 원재료로 **Dr.pharmacist 자체 연구 아티클**로 재작성하는 콘텐츠. 독자는 영상 출처를 모르게 함.
+Dr.'s Analysis — YouTube 트랜스크립트를 원재료로 **AI PharmCare 자체 연구 아티클**로 재작성하는 콘텐츠. 독자는 영상 출처를 모르게 함. 섹션 명칭의 'Dr.'는 실존 약사 Dr. Younghun Cho(PharmD)를 지칭.
 
 주요 필드:
 - 관리자 메타데이터: `youtubeUrl`, `youtubeId`, `expertName`, `expertCredential` (본문 노출 금지)
@@ -205,7 +205,7 @@ Dr.'s Analysis — YouTube 트랜스크립트를 원재료로 **Dr.pharmacist �
 **적용**: title, summary, keyTakeaways, analysisSections, properNotes, mentionedProducts.reason
 **예외**: `cleanTranscript` (원본 화자 보존, UI 비노출)
 
-1. **독립 연구 톤** — Dr.pharmacist 자체 연구 아티클처럼. 영상/화자/채널 레퍼런스 금지 ("he explains", "in this video", "from [channel]" 등).
+1. **독립 연구 톤** — AI PharmCare 자체 연구 아티클처럼. 영상/화자/채널 레퍼런스 금지 ("he explains", "in this video", "from [channel]" 등).
 2. **"overseas/foreign/imported" 표현 금지** — 독자는 미국인이므로 한국 기준 "해외 제품"은 독자에게 국내 제품.
 3. **한국 특화 컨텍스트 금지** — "K-beauty" 같은 정착 카테고리 외 한국 시장/규제/유통 레퍼런스 배제.
 4. **expertName/expertCredential 본문 노출 금지** — 관리자 메타데이터 전용.
@@ -301,7 +301,7 @@ Dr.'s Analysis — YouTube 트랜스크립트를 원재료로 **Dr.pharmacist �
 - `src/app/[locale]/(admin)/expert-picks/` — Dr.'s Analysis 관리 (YouTube URL → AI 분석 → draft/publish)
 
 ### Chat Sidebar (공개 페이지 좌측 고정)
-- `src/components/chat/chat-sidebar.tsx` — "Ask Dr.pharmacist" 챗봇. 데스크톱 좌측 340px 고정, 모바일 플로팅 버튼
+- `src/components/chat/chat-sidebar.tsx` — "Ask PharmCare" 챗봇 (AI 어시스턴트 프레이밍). 데스크톱 좌측 340px 고정, 모바일 플로팅 버튼
 - `src/app/api/chat/route.ts` — Gemini 스트리밍 + DB 제품 검색 → 응답에 `/analysis/[slug]` 링크 자동 삽입
 - 퀵 프롬프트 3개 제공, 대화 리셋 버튼
 

@@ -44,7 +44,7 @@ export async function generateMetadata({
     typeof consult.rawInput.text === "string"
       ? consult.rawInput.text.slice(0, 80)
       : "Pharmacist Q&A";
-  const title = `${question} — Pharmacist Answer | Dr.pharmacist`;
+  const title = `${question} — Pharmacist Answer | AI PharmCare`;
   const description = (final?.oneLineSummary ?? question).slice(0, 160);
 
   return {
@@ -159,7 +159,7 @@ export default async function PublicConsultPage({ params }: PageProps) {
           </div>
         )}
         <p className="mt-3 text-xs text-muted-foreground">
-          Shared by a Dr.pharmacist community member
+          Shared by a AI PharmCare community member
           {consult.publishedAt
             ? ` on ${formatDate(consult.publishedAt)}`
             : ""}

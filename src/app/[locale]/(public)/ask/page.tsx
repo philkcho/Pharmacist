@@ -8,12 +8,12 @@ import type { ConsultDraft } from "@/lib/ai/draft-consult";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 export const metadata: Metadata = {
-  title: "Community Q&A — Dr.pharmacist",
+  title: "Community Q&A — AI PharmCare",
   description:
-    "Pharmacist-reviewed questions and answers shared by the Dr.pharmacist community. Real medication, supplement, and skincare questions with science-backed answers.",
+    "Pharmacist-reviewed questions and answers shared by the AI PharmCare community. Real medication, supplement, and skincare questions with science-backed answers.",
   alternates: { canonical: "/ask" },
   openGraph: {
-    title: "Community Q&A — Dr.pharmacist",
+    title: "Community Q&A — AI PharmCare",
     description:
       "Real pharmacist-reviewed answers to questions about medications, supplements, and skincare.",
     url: `${SITE_URL}/ask`,

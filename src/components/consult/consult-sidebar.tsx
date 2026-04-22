@@ -239,7 +239,7 @@ function AuthedForm({ userEmail }: { userEmail: string }) {
     <form onSubmit={handleSubmit} className="mt-3">
       <div className="flex items-center gap-1.5 text-xs font-medium text-primary">
         <Pill className="h-3.5 w-3.5" />
-        Dr.pharmacist
+        AI PharmCare
       </div>
       <Textarea
         value={text}
