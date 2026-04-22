@@ -15,6 +15,7 @@ import {
   ChevronRight,
   LinkIcon,
   LogIn,
+  Pill,
 } from "lucide-react";
 import {
   getAnalyticsSummary,
@@ -74,7 +75,13 @@ function getPresetRange(preset: string): { from: string; to: string } {
 
 const CLICKS_PAGE_SIZE = 25;
 
-export function DashboardAnalytics() {
+interface DashboardAnalyticsProps {
+  recommendedProductCount: number;
+}
+
+export function DashboardAnalytics({
+  recommendedProductCount,
+}: DashboardAnalyticsProps) {
   const [preset, setPreset] = useState("7d");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
@@ -234,10 +241,11 @@ export function DashboardAnalytics() {
               }
             />
             <StatCard
-              title="Conversion Rate"
-              value={`${conversionRate.toFixed(2)}%`}
-              sub="clicks ÷ visitors"
-              icon={<ShoppingCart className="h-4 w-4 text-muted-foreground" />}
+              title="Recommended Products"
+              value={recommendedProductCount}
+              sub="on Dr.'s / Consult / Articles"
+              icon={<Pill className="h-4 w-4 text-muted-foreground" />}
+              href="/recommendations"
             />
           </div>
 
@@ -546,6 +554,7 @@ function StatCard({
   icon,
   onClick,
   active,
+  href,
 }: {
   title: string;
   value: number | string;
@@ -553,9 +562,10 @@ function StatCard({
   icon: React.ReactNode;
   onClick?: () => void;
   active?: boolean;
+  href?: string;
 }) {
-  const clickable = !!onClick;
-  return (
+  const clickable = !!onClick || !!href;
+  const card = (
     <Card
       onClick={onClick}
       className={`${
@@ -581,6 +591,8 @@ function StatCard({
       </CardContent>
     </Card>
   );
+  if (href) return <Link href={href}>{card}</Link>;
+  return card;
 }
 
 function MiniTable({

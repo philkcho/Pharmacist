@@ -26,80 +26,71 @@ import {
   Store,
   ShieldCheck,
   Play,
-  BarChart3,
   LogOut,
   Users,
   MessageSquare,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
-const menuItems = [
+// Groups mirror the public homepage layout: first the surfaces a visitor
+// actually sees (Dr.'s Analysis → Consult → Articles → Trends), then the
+// supporting master data and operations screens the admin needs to maintain
+// those surfaces.
+const menuGroups: {
+  label: string;
+  items: { title: string; href: string; icon: typeof LayoutDashboard }[];
+}[] = [
   {
-    title: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
+    label: "Overview",
+    items: [
+      { title: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    ],
   },
   {
-    title: "Analytics",
-    href: "/analytics",
-    icon: BarChart3,
+    label: "Homepage Content",
+    items: [
+      { title: "Dr.'s Analysis", href: "/expert-picks", icon: Play },
+      { title: "Consult Queue", href: "/consult-queue", icon: MessageSquare },
+      { title: "Articles", href: "/articles", icon: FileText },
+      { title: "Generate Article", href: "/articles/generate", icon: Sparkles },
+      { title: "Trends", href: "/trends", icon: TrendingUp },
+    ],
   },
   {
-    title: "Generate Article",
-    href: "/articles/generate",
-    icon: Sparkles,
+    label: "Master Data",
+    items: [
+      { title: "Medications", href: "/medications", icon: Pill },
+      { title: "Categories", href: "/categories", icon: FolderOpen },
+      { title: "Retailers", href: "/retailers", icon: Store },
+    ],
   },
   {
-    title: "Articles",
-    href: "/articles",
-    icon: FileText,
+    label: "Moderation",
+    items: [
+      { title: "Approval Queue", href: "/approval-queue", icon: ShieldCheck },
+      { title: "Review Requests", href: "/review-requests", icon: Inbox },
+    ],
   },
   {
-    title: "Categories",
-    href: "/categories",
-    icon: FolderOpen,
-  },
-  {
-    title: "Medications",
-    href: "/medications",
-    icon: Pill,
-  },
-  {
-    title: "Trends",
-    href: "/trends",
-    icon: TrendingUp,
-  },
-  {
-    title: "Consult Queue",
-    href: "/consult-queue",
-    icon: MessageSquare,
-  },
-  {
-    title: "Approval Queue",
-    href: "/approval-queue",
-    icon: ShieldCheck,
-  },
-  {
-    title: "Dr.'s Analysis",
-    href: "/expert-picks",
-    icon: Play,
-  },
-  {
-    title: "Retailers",
-    href: "/retailers",
-    icon: Store,
-  },
-  {
-    title: "Review Requests",
-    href: "/review-requests",
-    icon: Inbox,
-  },
-  {
-    title: "Users",
-    href: "/users",
-    icon: Users,
+    label: "Administration",
+    items: [{ title: "Users", href: "/users", icon: Users }],
   },
 ];
+
+// `usePathname()` returns the locale-prefixed path (e.g. /en/articles). Strip
+// that prefix before matching, and keep /articles from lighting up when the
+// user is actually on /articles/generate.
+function isActiveRoute(pathname: string, href: string): boolean {
+  const stripped = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
+  if (href === "/articles") {
+    return (
+      stripped === "/articles" ||
+      (stripped.startsWith("/articles/") &&
+        !stripped.startsWith("/articles/generate"))
+    );
+  }
+  return stripped === href || stripped.startsWith(href + "/");
+}
 
 export function AdminSidebar() {
   const pathname = usePathname();
@@ -126,24 +117,26 @@ export function AdminSidebar() {
       </SidebarHeader>
 
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Content Management</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {menuItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    render={<Link href={item.href} />}
-                    isActive={pathname.includes(item.href)}
-                  >
-                    <item.icon className="h-4 w-4" />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {menuGroups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      render={<Link href={item.href} />}
+                      isActive={isActiveRoute(pathname, item.href)}
+                    >
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
 
       <SidebarFooter className="border-t p-4 pb-6 space-y-3">

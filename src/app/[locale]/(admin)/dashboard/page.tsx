@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, MessageCircleQuestion, Users, UserPlus, Sparkles } from "lucide-react";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getRecommendationsSummary } from "@/lib/actions/recommendations";
 import { DashboardAnalytics } from "./dashboard-analytics";
 
 async function getDashboardStats() {
@@ -57,7 +58,10 @@ async function getDashboardStats() {
 }
 
 export default async function DashboardPage() {
-  const stats = await getDashboardStats();
+  const [stats, recommendationsSummary] = await Promise.all([
+    getDashboardStats(),
+    getRecommendationsSummary(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -99,7 +103,9 @@ export default async function DashboardPage() {
       </div>
 
       {/* Visitor & conversion analytics (date-range driven) */}
-      <DashboardAnalytics />
+      <DashboardAnalytics
+        recommendedProductCount={recommendationsSummary.uniqueProductCount}
+      />
     </div>
   );
 }
