@@ -156,12 +156,12 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
           <div className="min-w-0">
             {tocItems.length > 0 && <ArticleTocMobile items={tocItems} />}
 
-            {/* Summary (TL;DR) — elevated lead */}
+            {/* Summary — elevated lead */}
             {pick.summary && (
               <section id="summary" className="mb-10 scroll-mt-24">
                 <div className="rounded-xl border-l-4 border-primary bg-muted/30 p-6">
                   <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-primary">
-                    TL;DR
+                    Summary
                   </p>
                   <p className="text-lg italic leading-relaxed text-foreground/90">
                     {pick.summary}
