@@ -116,12 +116,16 @@ function resolveDomain(
 }
 
 /**
- * All categories (top-level + children) with approved-product counts,
- * plus a computed `domain` (pharmaceutical | beauty). Zero-product
- * categories are filtered out so the widget doesn't show dead rows.
+ * Leaf-level categories with approved-product counts, plus computed `domain`.
  *
- * Used by the homepage left-side category widget — filtered client-side
- * by the radio toggle between Pharmaceutical and Beauty.
+ * "Leaf-level" = a category whose children (if any) have no approved
+ * products. Parents that already have populated children are hidden —
+ * the children surface instead. This gives the widget an ingredient-level
+ * feel (Fish Oil / Creatine / Vitamin D3+K2) rather than broad buckets
+ * (Vitamins & Supplements).
+ *
+ * Zero-product categories are filtered out so the widget never shows
+ * dead rows. Client filters by domain (Pharmaceutical / Beauty).
  */
 export async function listWidgetCategories(): Promise<CategoryWidgetEntry[]> {
   const supabase = await createClient();
@@ -140,9 +144,15 @@ export async function listWidgetCategories(): Promise<CategoryWidgetEntry[]> {
   const all = rows as CategoryRow[];
   const bySlug = new Map<string, CategoryRow>();
   const byId = new Map<number, CategoryRow>();
+  const childrenByParent = new Map<number, CategoryRow[]>();
   for (const r of all) {
     bySlug.set(r.slug, r);
     byId.set(r.id, r);
+    if (r.parent_id != null) {
+      const list = childrenByParent.get(r.parent_id) ?? [];
+      list.push(r);
+      childrenByParent.set(r.parent_id, list);
+    }
   }
 
   // 2) approved product counts (one query, grouped in JS)
@@ -158,11 +168,20 @@ export async function listWidgetCategories(): Promise<CategoryWidgetEntry[]> {
     countByCategoryId.set(cid, (countByCategoryId.get(cid) ?? 0) + 1);
   }
 
-  // 3) assemble — skip categories with 0 approved products
+  // 3) for each category decide if it's leaf-visible
   const entries: CategoryWidgetEntry[] = [];
   for (const r of all) {
     const count = countByCategoryId.get(r.id) ?? 0;
     if (count === 0) continue;
+
+    // Hide this parent if any of its direct children have approved products —
+    // the children carry the specific ingredient-level label users want.
+    const children = childrenByParent.get(r.id) ?? [];
+    const hasPopulatedChild = children.some(
+      (c) => (countByCategoryId.get(c.id) ?? 0) > 0
+    );
+    if (hasPopulatedChild) continue;
+
     entries.push({
       id: r.id,
       slug: r.slug,
