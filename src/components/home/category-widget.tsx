@@ -2,10 +2,13 @@
 
 import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
-import { Search, ShoppingCart, Loader2, FlaskConical } from "lucide-react";
+import { Search, ShoppingCart, Loader2, FlaskConical, Sparkles } from "lucide-react";
 import { usePathname } from "next/navigation";
 import { ProductImage } from "@/components/ui/product-image";
-import type { CategoryWidgetEntry } from "@/lib/actions/categories";
+import type {
+  CategoryDomain,
+  CategoryWidgetEntry,
+} from "@/lib/actions/categories";
 import type { CategoryTopProduct } from "@/lib/actions/medications";
 import { getCategoryTopProducts } from "@/lib/actions/medications";
 
@@ -14,6 +17,11 @@ interface Props {
   initialSlug: string;
   initialProducts: CategoryTopProduct[];
 }
+
+const DOMAIN_LABELS: Record<CategoryDomain, string> = {
+  pharmaceutical: "Pharmaceutical",
+  beauty: "Beauty",
+};
 
 /**
  * Client-side interactive homepage widget:
@@ -28,22 +36,34 @@ export function CategoryWidget({
   initialSlug,
   initialProducts,
 }: Props) {
+  // Pick the initial domain from whichever domain the initialSlug belongs to.
+  const initialCat = categories.find((c) => c.slug === initialSlug);
+  const [domain, setDomain] = useState<CategoryDomain>(
+    initialCat?.domain ?? "pharmaceutical"
+  );
   const [query, setQuery] = useState("");
   const [selectedSlug, setSelectedSlug] = useState(initialSlug);
   const [products, setProducts] =
     useState<CategoryTopProduct[]>(initialProducts);
   const [isPending, startTransition] = useTransition();
 
+  // Categories for the currently selected domain
+  const domainCategories = useMemo(
+    () => categories.filter((c) => c.domain === domain),
+    [categories, domain]
+  );
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return categories;
+    if (!query.trim()) return domainCategories;
     const q = query.trim().toLowerCase();
-    return categories.filter(
+    return domainCategories.filter(
       (c) => c.name.toLowerCase().includes(q) || c.slug.includes(q)
     );
-  }, [categories, query]);
+  }, [domainCategories, query]);
 
   const selected =
-    categories.find((c) => c.slug === selectedSlug) ?? categories[0];
+    domainCategories.find((c) => c.slug === selectedSlug) ??
+    domainCategories[0];
 
   const handleSelect = (slug: string) => {
     if (slug === selectedSlug) return;
@@ -54,7 +74,25 @@ export function CategoryWidget({
     });
   };
 
+  const handleDomainChange = (next: CategoryDomain) => {
+    if (next === domain) return;
+    setDomain(next);
+    setQuery("");
+    const nextDomainCategories = categories.filter((c) => c.domain === next);
+    const firstSlug = nextDomainCategories[0]?.slug;
+    if (!firstSlug) return;
+    setSelectedSlug(firstSlug);
+    startTransition(async () => {
+      const nextProducts = await getCategoryTopProducts(firstSlug, 5);
+      setProducts(nextProducts);
+    });
+  };
+
   if (categories.length === 0) return null;
+
+  // Presence of each domain's categories (for disabling empty toggle)
+  const hasPharma = categories.some((c) => c.domain === "pharmaceutical");
+  const hasBeauty = categories.some((c) => c.domain === "beauty");
 
   return (
     <div className="rounded-2xl border bg-card p-4 shadow-sm">
@@ -65,6 +103,28 @@ export function CategoryWidget({
       <p className="text-xs text-muted-foreground">
         Pick a category to see the top picks
       </p>
+
+      {/* Domain toggle — Pharmaceutical / Beauty */}
+      <div
+        role="radiogroup"
+        aria-label="Category domain"
+        className="mt-3 flex rounded-lg border bg-muted/40 p-0.5"
+      >
+        <DomainToggleButton
+          icon={FlaskConical}
+          label={DOMAIN_LABELS.pharmaceutical}
+          selected={domain === "pharmaceutical"}
+          disabled={!hasPharma}
+          onClick={() => handleDomainChange("pharmaceutical")}
+        />
+        <DomainToggleButton
+          icon={Sparkles}
+          label={DOMAIN_LABELS.beauty}
+          selected={domain === "beauty"}
+          disabled={!hasBeauty}
+          onClick={() => handleDomainChange("beauty")}
+        />
+      </div>
 
       {/* Search */}
       <div className="relative mt-3">
@@ -82,7 +142,7 @@ export function CategoryWidget({
       {/* Scrollable category list */}
       <ul
         role="listbox"
-        aria-label="Supplement categories"
+        aria-label={`${DOMAIN_LABELS[domain]} categories`}
         className="mt-2 max-h-[240px] space-y-0.5 overflow-y-auto pr-1"
       >
         {filtered.length === 0 && (
@@ -144,6 +204,38 @@ export function CategoryWidget({
         </ol>
       )}
     </div>
+  );
+}
+
+function DomainToggleButton({
+  icon: Icon,
+  label,
+  selected,
+  disabled,
+  onClick,
+}: {
+  icon: typeof FlaskConical;
+  label: string;
+  selected: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="radio"
+      aria-checked={selected}
+      disabled={disabled}
+      onClick={onClick}
+      className={`flex flex-1 items-center justify-center gap-1 rounded-md px-2 py-1.5 text-xs font-semibold transition-all ${
+        selected
+          ? "bg-background text-primary shadow-sm"
+          : "text-muted-foreground hover:text-foreground"
+      } disabled:cursor-not-allowed disabled:opacity-40`}
+    >
+      <Icon className="h-3.5 w-3.5" />
+      {label}
+    </button>
   );
 }
 

@@ -116,6 +116,7 @@ export const PRODUCT_SEED_LIST: SeedProduct[] = [
   { name: "Refresh Tears", genericName: "carboxymethylcellulose sodium", productType: "otc_drug", category: "eye-care" },
   { name: "Visine Original", genericName: "tetrahydrozoline", productType: "otc_drug", category: "eye-care" },
   { name: "Pataday Once Daily", genericName: "olopatadine", productType: "otc_drug", category: "eye-care" },
+  { name: "Blink Tears Lubricating Eye Drops", genericName: "polyethylene glycol 400", productType: "otc_drug", category: "eye-care" },
 
   // ──────────────────────────────────────────────
   // Sunscreen & SPF
@@ -138,6 +139,10 @@ export const PRODUCT_SEED_LIST: SeedProduct[] = [
   { name: "Paula's Choice 2% BHA Exfoliant", genericName: "salicylic acid 2%", productType: "cosmetic", category: "acne-treatments" },
   { name: "The Ordinary Niacinamide 10%", genericName: "niacinamide", productType: "cosmetic", category: "acne-treatments" },
   { name: "CeraVe Moisturizing Cream", genericName: "ceramides/hyaluronic acid", productType: "cosmetic", category: "moisturizing-creams" },
+  { name: "Cetaphil Moisturizing Cream", genericName: "glycerin/petrolatum", productType: "cosmetic", category: "moisturizing-creams" },
+  { name: "Neutrogena Hydro Boost Water Gel", genericName: "hyaluronic acid/glycerin", productType: "cosmetic", category: "moisturizing-creams" },
+  { name: "Eucerin Advanced Repair Cream", genericName: "urea/ceramide-3", productType: "cosmetic", category: "moisturizing-creams" },
+  { name: "First Aid Beauty Ultra Repair Cream", genericName: "colloidal oatmeal/shea butter", productType: "cosmetic", category: "moisturizing-creams" },
   { name: "CeraVe Hydrating Cleanser", genericName: "ceramides/hyaluronic acid", productType: "cosmetic", category: "skin-care" },
   { name: "Cetaphil Gentle Cleanser", genericName: "cetyl alcohol/propylene glycol", productType: "cosmetic", category: "skin-care" },
   { name: "Vanicream Moisturizing Cream", genericName: "petrolatum/sorbitol", productType: "cosmetic", category: "skin-care" },
@@ -149,6 +154,8 @@ export const PRODUCT_SEED_LIST: SeedProduct[] = [
   { name: "The Ordinary Retinol 0.5%", genericName: "retinol", productType: "cosmetic", category: "anti-aging" },
   { name: "RoC Retinol Correxion", genericName: "retinol", productType: "cosmetic", category: "anti-aging" },
   { name: "Neutrogena Rapid Wrinkle Repair", genericName: "retinol/hyaluronic acid", productType: "cosmetic", category: "anti-aging" },
+  { name: "Olay Regenerist Retinol24", genericName: "retinol/niacinamide", productType: "cosmetic", category: "anti-aging" },
+  { name: "Paula's Choice 1% Retinol Booster", genericName: "retinol", productType: "cosmetic", category: "anti-aging" },
   { name: "The Ordinary Hyaluronic Acid 2%", genericName: "hyaluronic acid", productType: "cosmetic", category: "skin-care" },
   { name: "The Ordinary Vitamin C Suspension 23%", genericName: "ascorbic acid", productType: "cosmetic", category: "skin-care" },
   { name: "SkinCeuticals C E Ferulic", genericName: "L-ascorbic acid/alpha tocopherol/ferulic acid", productType: "cosmetic", category: "skin-care" },
