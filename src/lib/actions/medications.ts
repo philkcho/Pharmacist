@@ -475,6 +475,93 @@ export async function getMedicationsByCategorySlug(
   return (data ?? []) as CompareMedicationRow[];
 }
 
+// ─── Homepage category widget — top-N by category ──────────
+
+export interface CategoryTopProduct {
+  id: number;
+  slug: string;
+  name: string;
+  imageUrl: string | null;
+  priceRange: string | null;
+  /** Highest-priority retailer purchase link, if any. */
+  purchaseUrl: string | null;
+  retailerName: string | null;
+}
+
+/**
+ * Top N approved products in a category slug, ranked by is_featured then
+ * comparison_score. For each product, attaches its highest-priority
+ * (lowest sort_order) active purchase link if one exists.
+ *
+ * Used by the homepage left-side category widget.
+ */
+export async function getCategoryTopProducts(
+  slug: string,
+  limit = 5
+): Promise<CategoryTopProduct[]> {
+  const supabase = await createClient();
+
+  const { data: category } = await supabase
+    .from("categories")
+    .select("id")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (!category) return [];
+
+  const { data: meds, error } = await supabase
+    .from("medications")
+    .select("id, slug, name, image_url, price_range")
+    .eq("category_id", category.id)
+    .eq("approval_status", "approved")
+    .order("is_featured", { ascending: false })
+    .order("comparison_score", { ascending: false, nullsFirst: false })
+    .order("name")
+    .limit(limit);
+
+  if (error || !meds || meds.length === 0) {
+    return [];
+  }
+
+  // Fetch best active purchase link per medication in one query.
+  const medIds = meds.map((m) => m.id as number);
+  const { data: links } = await supabase
+    .from("product_purchase_links")
+    .select("medication_id, url, affiliate_url, sort_order, retailers(name)")
+    .in("medication_id", medIds)
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true });
+
+  // Group by medication_id and keep first (lowest sort_order) wins.
+  const bestLinkByMed = new Map<
+    number,
+    { url: string; retailerName: string | null }
+  >();
+  for (const link of links ?? []) {
+    const mid = link.medication_id as number;
+    if (bestLinkByMed.has(mid)) continue;
+    const retailer = link.retailers as { name?: string } | null;
+    bestLinkByMed.set(mid, {
+      url: (link.affiliate_url as string | null) ?? (link.url as string),
+      retailerName: retailer?.name ?? null,
+    });
+  }
+
+  return meds.map((m) => {
+    const mid = m.id as number;
+    const best = bestLinkByMed.get(mid);
+    return {
+      id: mid,
+      slug: m.slug as string,
+      name: m.name as string,
+      imageUrl: (m.image_url as string | null) ?? null,
+      priceRange: (m.price_range as string | null) ?? null,
+      purchaseUrl: best?.url ?? null,
+      retailerName: best?.retailerName ?? null,
+    };
+  });
+}
+
 /**
  * Get only the featured medications across all categories, globally
  * sorted by comparison_score. Used by the `/compare` hub page's
