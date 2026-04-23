@@ -780,6 +780,11 @@ export const expertPicks = pgTable("expert_picks", {
     { name: string; slug?: string; reason: string }[]
   >(),
 
+  // Cached AI-generated "Products at a Glance" comparison across
+  // mentionedProducts. Populated lazily on first view or eagerly in
+  // createExpertPick. Shape: ExpertComparison in generate-expert-comparison.ts.
+  comparisonJsonb: jsonb("comparison_jsonb"),
+
   status: text().notNull().default("draft"),
   publishedAt: timestamp("published_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow(),

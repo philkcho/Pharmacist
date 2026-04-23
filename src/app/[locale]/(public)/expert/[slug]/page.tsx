@@ -8,7 +8,11 @@ import {
   Pill,
 } from "lucide-react";
 import Link from "next/link";
-import { getExpertPickBySlug } from "@/lib/actions/expert-picks";
+import {
+  getExpertPickBySlug,
+  getOrGenerateExpertComparison,
+  fetchComparisonProducts,
+} from "@/lib/actions/expert-picks";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
@@ -21,6 +25,7 @@ import {
   type TocItem,
 } from "@/components/expert/article-toc";
 import { ReviewerCard } from "@/components/expert/reviewer-card";
+import { ProductsAtAGlance } from "@/components/expert/products-at-a-glance";
 
 interface ExpertDetailProps {
   params: Promise<{ slug: string }>;
@@ -86,6 +91,22 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
 
   const expertUrl = `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com"}/expert/${slug}`;
 
+  // "Products at a Glance" — lazy-generated, skipped when <2 products.
+  const mentionedSlugs =
+    pick.mentionedProducts
+      ?.map((m) => m.slug)
+      .filter((s): s is string => typeof s === "string" && s.length > 0)
+      .slice(0, 5) ?? [];
+  const [comparison, comparisonProducts] =
+    mentionedSlugs.length >= 2
+      ? await Promise.all([
+          getOrGenerateExpertComparison(slug),
+          fetchComparisonProducts(mentionedSlugs),
+        ])
+      : [null, []];
+  const showComparison =
+    comparison !== null && comparisonProducts.length >= 2;
+
   // Build TOC — only include sections that will actually render.
   const tocItems: TocItem[] = [];
   if (pick.summary) tocItems.push({ id: "summary", label: "Summary" });
@@ -102,6 +123,9 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
   }
   if (pick.mentionedProducts && pick.mentionedProducts.length > 0) {
     tocItems.push({ id: "products", label: "Products mentioned" });
+  }
+  if (showComparison) {
+    tocItems.push({ id: "comparison", label: "At a glance" });
   }
   if (pick.references && pick.references.length > 0) {
     tocItems.push({ id: "references", label: "References" });
@@ -252,6 +276,16 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
                     />
                   ))}
                 </div>
+              </section>
+            )}
+
+            {/* Products at a Glance — AI-generated N-product comparison */}
+            {showComparison && comparison && (
+              <section id="comparison" className="mb-12 scroll-mt-24">
+                <ProductsAtAGlance
+                  products={comparisonProducts}
+                  comparison={comparison}
+                />
               </section>
             )}
 
