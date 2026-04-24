@@ -34,11 +34,19 @@ import type {
   AnalysisResult,
   MarketReaction,
   ProductMatch,
+  TopicUnderstanding,
 } from "@/lib/ai/types";
 
 // ============================================================
 // Ingestion result + row types
 // ============================================================
+
+export interface IngestedTrendPreview {
+  queryText: string;
+  category: TrendCategory;
+  rankType: "top" | "rising";
+  rankPosition: number | null;
+}
 
 export interface IngestionResult {
   insertedCount: number;
@@ -46,6 +54,8 @@ export interface IngestionResult {
   skippedEmptyCount: number;
   errors: string[];
   detectedWeek: string;
+  /** The actual trends that were inserted this run — for admin preview. */
+  insertedTrends: IngestedTrendPreview[];
 }
 
 export type TrendStatus =
@@ -153,6 +163,7 @@ export async function ingestWeeklyTrends(): Promise<IngestionResult> {
     skippedEmptyCount: 0,
     errors: [],
     detectedWeek,
+    insertedTrends: [],
   };
 
   let bundles;
@@ -215,6 +226,12 @@ export async function ingestWeeklyTrends(): Promise<IngestionResult> {
       }
 
       result.insertedCount++;
+      result.insertedTrends.push({
+        queryText: trend.query,
+        category: bundle.category,
+        rankType: trend.rankType,
+        rankPosition: trend.rankPosition,
+      });
     }
   }
 
@@ -447,6 +464,10 @@ export interface AnalyzeTrendResult {
   outcome: "published" | "rejected" | "failed";
   reason?: string;
   slug?: string;
+  /** Original trend keyword (for admin preview listing). */
+  queryText?: string;
+  /** AI-generated headline when outcome === "published". */
+  headline?: string | null;
 }
 
 export interface AnalysisBatchResult {
@@ -591,7 +612,7 @@ export async function analyzeTrend(
       ? await matchProducts(
           understanding,
           trendRow.category as TrendCategory,
-          3
+          5
         ).catch((err) => {
           console.warn(
             `[trends] matchProducts failed for trend ${trendId}:`,
@@ -705,14 +726,26 @@ export async function analyzeTrend(
           `trend_topics publish update failed: ${updateError.message}`
         );
       }
-      return { trendId, outcome: "published", slug };
+      return {
+        trendId,
+        outcome: "published",
+        slug,
+        queryText: trendRow.query_text,
+        headline,
+      };
     } else {
+      // Persist the AI's refusal reason so the Rejected tab can explain
+      // why an item was auto-rejected (e.g. "no OTC ADHD medications
+      // exist", "insufficient evidence", "medical-advice request").
+      const refusalReason = synthesisResult.refusal.reason ?? null;
       const { error: updateError } = await admin
         .from("trend_topics")
         .update({
           status: "rejected",
           analyzed_at: now,
-          analysis_error: null,
+          analysis_error: refusalReason
+            ? `AI refusal: ${refusalReason}`.slice(0, 500)
+            : null,
         })
         .eq("id", trendId);
       if (updateError) {
@@ -723,7 +756,8 @@ export async function analyzeTrend(
       return {
         trendId,
         outcome: "rejected",
-        reason: synthesisResult.refusal.reason,
+        reason: refusalReason ?? undefined,
+        queryText: trendRow.query_text,
       };
     }
   } catch (err) {
@@ -738,7 +772,12 @@ export async function analyzeTrend(
         analysis_error: message.slice(0, 500),
       })
       .eq("id", trendId);
-    return { trendId, outcome: "failed", reason: message };
+    return {
+      trendId,
+      outcome: "failed",
+      reason: message,
+      queryText: trendRow.query_text,
+    };
   }
 }
 
@@ -892,6 +931,155 @@ export async function unpublishTrend(
   revalidatePath("/trending");
   if (current?.slug) revalidatePath(`/trending/${current.slug}`);
   revalidatePath("/trends");
+  return { success: true };
+}
+
+/**
+ * Run the full Layer 1→2→3 pipeline on a single pending trend. Used
+ * by the admin "Analyze this one" button. Wraps analyzeTrend() with
+ * the pharmacist auth check + revalidation.
+ */
+export async function triggerSingleAnalysis(
+  trendId: number
+): Promise<AnalyzeTrendResult> {
+  await assertPharmacist();
+  const result = await analyzeTrend(trendId);
+  revalidatePath("/trends");
+  return result;
+}
+
+// ─── Backfill: re-match up to 5 products per existing analysis ──
+
+export interface BackfillResult {
+  scanned: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+/**
+ * Re-run `matchProducts()` with limit=5 against every trend that already
+ * has a completed analysis (status=published or rejected). Updates the
+ * cached `product_matches_jsonb` in-place so the public trend page can
+ * surface 5 recommended products for older articles that were analyzed
+ * when the cap was 3.
+ *
+ * Idempotent: re-running is safe. No AI calls — matchProducts is a DB
+ * lookup against approved medications, so cost is low. Default limit of
+ * 100 covers every trend in a single click for most sites; adjust higher
+ * if you know you have more.
+ */
+export async function backfillTrendProductMatches(
+  limit = 100
+): Promise<BackfillResult> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+  const result: BackfillResult = {
+    scanned: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  // Fetch analyses with their parent trend's category + status
+  const { data: rows, error } = await admin
+    .from("trend_analyses")
+    .select(
+      "trend_topic_id, understanding_jsonb, product_matches_jsonb, trend_topics!inner(id, status, category)"
+    )
+    .in("trend_topics.status", ["published", "rejected"])
+    .order("trend_topic_id", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    result.errors.push(`analyses load failed: ${error.message}`);
+    return result;
+  }
+
+  for (const row of rows ?? []) {
+    result.scanned++;
+    const topic = Array.isArray(row.trend_topics)
+      ? row.trend_topics[0]
+      : row.trend_topics;
+    if (!topic) {
+      result.skipped++;
+      continue;
+    }
+
+    const understanding = row.understanding_jsonb as TopicUnderstanding | null;
+    if (!understanding || !understanding.entities) {
+      result.skipped++;
+      continue;
+    }
+
+    try {
+      const newMatches = await matchProducts(
+        understanding,
+        topic.category as TrendCategory,
+        5
+      );
+
+      const oldMatches = Array.isArray(row.product_matches_jsonb)
+        ? (row.product_matches_jsonb as ProductMatch[])
+        : [];
+      if (
+        oldMatches.length === newMatches.length &&
+        oldMatches.every((m, i) => m.medicationId === newMatches[i]?.medicationId)
+      ) {
+        result.skipped++;
+        continue;
+      }
+
+      const { error: updErr } = await admin
+        .from("trend_analyses")
+        .update({ product_matches_jsonb: newMatches })
+        .eq("trend_topic_id", row.trend_topic_id);
+
+      if (updErr) {
+        result.errors.push(
+          `trend #${topic.id}: update failed: ${updErr.message}`
+        );
+        continue;
+      }
+
+      result.updated++;
+    } catch (err) {
+      result.errors.push(
+        `trend #${topic.id}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/trending");
+  return result;
+}
+
+/**
+ * Hard-delete a trend (and its trend_analyses via FK cascade). Use
+ * for raw-pending rows that aren't worth analyzing — keyword noise,
+ * irrelevant to health/beauty, etc. Prefer rejectTrend() for already-
+ * analyzed drafts so we keep the synthesis for audit.
+ */
+export async function deleteTrend(
+  trendId: number
+): Promise<{ success: boolean; error?: string }> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+
+  // Remove child rows first in case the FK is not ON DELETE CASCADE.
+  await admin.from("trend_analyses").delete().eq("trend_topic_id", trendId);
+
+  const { error } = await admin
+    .from("trend_topics")
+    .delete()
+    .eq("id", trendId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/trends");
+  revalidatePath("/");
+  revalidatePath("/trending");
   return { success: true };
 }
 

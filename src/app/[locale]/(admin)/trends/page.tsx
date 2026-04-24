@@ -9,19 +9,17 @@ interface PageProps {
 }
 
 const VALID_FILTERS: readonly AdminTrendFilter[] = [
+  "pending",
   "pending_review",
   "live",
-  "pending",
-  "analyzing",
   "rejected",
-  "archived",
 ] as const;
 
 function parseFilter(raw: string | undefined): AdminTrendFilter {
   if (raw && (VALID_FILTERS as readonly string[]).includes(raw)) {
     return raw as AdminTrendFilter;
   }
-  return "pending_review";
+  return "pending";
 }
 
 export default async function TrendsAdminPage({ searchParams }: PageProps) {
@@ -40,7 +38,9 @@ export default async function TrendsAdminPage({ searchParams }: PageProps) {
         </p>
       </div>
 
-      <TrendsClient initialTrends={trends} currentFilter={filter} />
+      {/* `key` forces a fresh client state whenever the filter changes so
+          published / unpublished rows don't leak between tabs after nav. */}
+      <TrendsClient key={filter} initialTrends={trends} currentFilter={filter} />
     </div>
   );
 }

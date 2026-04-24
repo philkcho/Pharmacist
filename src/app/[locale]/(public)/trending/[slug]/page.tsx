@@ -2,18 +2,19 @@ import { Badge } from "@/components/ui/badge";
 import {
   TrendingUp,
   AlertTriangle,
-  Clock,
   ExternalLink,
   ChevronRight,
   ShieldAlert,
   Star,
-  Search,
   Check,
   X,
   FlaskConical,
   ShoppingCart,
+  Scale,
+  Pill,
 } from "lucide-react";
 import Link from "next/link";
+import { ProductImage } from "@/components/ui/product-image";
 import {
   getTrendBySlug,
   type TrendPageData,
@@ -227,21 +228,6 @@ export default async function TrendPage({ params }: TrendPageProps) {
         </div>
       )}
 
-      {/* ===== Shop This Topic — link to /topics/[keyword] ===== */}
-      <div className="mt-6">
-        <Link
-          href={`/topics/${encodeURIComponent(topic.normalizedQuery ?? topic.queryText.toLowerCase().replace(/\s+/g, "-"))}`}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 px-5 py-3 text-sm font-semibold text-primary transition-all hover:bg-primary/10 hover:shadow-sm sm:w-auto"
-        >
-          <ShoppingCart className="h-4 w-4" />
-          Shop Related Products
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          Top picks from Amazon, iHerb &amp; more — reviewed by pharmacists
-        </p>
-      </div>
-
       {/* ===== Section 1 — The 1-Minute Read ===== */}
       {leadText.length > 0 && synthesis != null && (
         <section className="mt-8">
@@ -278,68 +264,59 @@ export default async function TrendPage({ params }: TrendPageProps) {
         </section>
       )}
 
-      {/* ===== Section 4 — Representative Products (conditional) ===== */}
+      {/* ===== Section 4 — Recommended Products (top 5) ===== */}
       {hasProducts && (
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">Related Products</h2>
-          <div className="mt-4 space-y-4">
-            {matchedMedications.slice(0, 3).map((med) => {
-              const match = productMatches.find(
-                (p) => p.medicationId === med.id
+        <section className="mt-10">
+          <div className="mb-3 h-0.5 w-10 bg-primary" />
+          <h2 className="flex items-center gap-2 text-2xl font-bold tracking-tight">
+            <Scale className="h-5 w-5 text-primary" />
+            Recommended Products
+          </h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Top pharmacist-reviewed picks mentioned in this article.
+          </p>
+
+          <div
+            className={`mt-5 grid gap-3 ${
+              matchedMedications.length <= 2
+                ? "grid-cols-2"
+                : matchedMedications.length === 3
+                  ? "grid-cols-2 sm:grid-cols-3"
+                  : matchedMedications.length === 4
+                    ? "grid-cols-2 sm:grid-cols-4"
+                    : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+            }`}
+          >
+            {matchedMedications.slice(0, 5).map((med, i) => {
+              // Pick the highest-priority active link for this product
+              const primary = purchaseLinks.find(
+                (l) => l.medicationId === med.id
               );
               return (
-                <ProductCard
+                <RecommendedProductCard
                   key={med.id}
+                  rank={i + 1}
                   medication={med}
-                  matchReason={match?.reason}
-                  ingredientHighlights={match?.ingredientHighlights}
+                  trendId={topic.id}
+                  primaryLink={primary ?? null}
                 />
               );
             })}
           </div>
+
           {matchedMedications.length < 3 && (
-            <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+            <div className="mt-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
               Only {matchedMedications.length} pharmacist-curated match
               {matchedMedications.length === 1 ? "" : "es"} so far — more
               options may be added after pharmacist review.
             </div>
           )}
-          <p className="mt-3 text-xs text-muted-foreground">
-            These products are for informational purposes only. Always consult
-            your pharmacist or healthcare provider before use.
-          </p>
 
-          {/* Where to Buy links */}
-          {purchaseLinks.length > 0 && (
-            <div className="mt-4">
-              <h3 className="text-sm font-medium">Where to Buy</h3>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {purchaseLinks.map((link) => (
-                  <a
-                    key={link.linkId}
-                    href={`/api/click/${link.linkId}?ref=trend_article&rid=${topic.id}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
-                  >
-                    <ShoppingCart className="h-3 w-3" />
-                    {link.retailerName}
-                    {link.price && (
-                      <span className="text-xs text-muted-foreground">
-                        {link.priceCurrency === "USD" ? "$" : link.priceCurrency}
-                        {link.price}
-                      </span>
-                    )}
-                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                  </a>
-                ))}
-              </div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                AI PharmCare may earn a commission from purchases made through
-                these links.
-              </p>
-            </div>
-          )}
+          <p className="mt-4 text-xs text-muted-foreground">
+            AI PharmCare may earn a commission from purchases made through
+            these links. Always consult your pharmacist or healthcare provider
+            before use.
+          </p>
         </section>
       )}
 
@@ -355,27 +332,6 @@ export default async function TrendPage({ params }: TrendPageProps) {
         marketReaction={marketReaction}
         medication={hasProducts ? matchedMedications[0] : undefined}
       />
-
-      {/* ===== Section 7 — People Ask Next ===== */}
-      {synthesis?.followUpQuestions &&
-        synthesis.followUpQuestions.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-lg font-semibold">People Ask Next</h2>
-            <div className="mt-3 flex flex-wrap gap-2">
-              {synthesis.followUpQuestions.map((q, i) => (
-                <Link
-                  key={i}
-                  href={`/en/lookup?q=${encodeURIComponent(q)}`}
-                  className="flex items-center gap-1 rounded-full border px-3 py-1.5 text-sm transition-colors hover:bg-muted"
-                >
-                  <Search className="h-3 w-3" />
-                  {q}
-                  <ChevronRight className="h-3 w-3" />
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
       {/* ===== Section 8 — People Also Search ===== */}
       {marketReaction.relatedQueries &&
@@ -398,46 +354,6 @@ export default async function TrendPage({ params }: TrendPageProps) {
 
       {/* ===== Section 9 — Sources ===== */}
       {sources.length > 0 && <SourcesSection sources={sources} />}
-
-      {/* ===== Section 10 — Limitations ===== */}
-      {synthesis?.limitations && synthesis.limitations.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-lg font-semibold">What We Don&apos;t Know Yet</h2>
-          <ul className="mt-3 space-y-1 text-sm text-muted-foreground">
-            {synthesis.limitations.map((lim, i) => (
-              <li key={i} className="flex items-start gap-2">
-                <span className="mt-1 block h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/50" />
-                {lim}
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {/* ===== Footer — Review Status + Disclaimer ===== */}
-      <footer className="mt-12 space-y-4">
-        {topic.pharmacistReviewed && topic.reviewedAt && (
-          <div className="rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800 dark:border-green-900 dark:bg-green-950 dark:text-green-200">
-            <div className="flex items-center gap-2">
-              <Check className="h-4 w-4" />
-              <span className="font-medium">
-                Reviewed by pharmacist on{" "}
-                {new Date(topic.reviewedAt).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })}
-              </span>
-            </div>
-          </div>
-        )}
-
-
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Clock className="h-3 w-3" />
-          <span>~1 min read</span>
-        </div>
-      </footer>
       </div>
     </article>
   );
@@ -598,6 +514,83 @@ function WhyNowSection({
         </div>
       )}
     </section>
+  );
+}
+
+function RecommendedProductCard({
+  rank,
+  medication,
+  trendId,
+  primaryLink,
+}: {
+  rank: number;
+  medication: TrendPageData["matchedMedications"][number];
+  trendId: number;
+  primaryLink: TrendPageData["purchaseLinks"][number] | null;
+}) {
+  const priceLabel = primaryLink?.price
+    ? `${primaryLink.priceCurrency === "USD" ? "$" : primaryLink.priceCurrency}${primaryLink.price}`
+    : (medication.priceRange ?? "");
+
+  return (
+    <div className="group flex h-full flex-col overflow-hidden rounded-xl border bg-background transition-all hover:border-primary/40 hover:shadow-md">
+      {/* Thumbnail + rank badge */}
+      <Link
+        href={`/analysis/${medication.slug}`}
+        className="relative block aspect-square w-full overflow-hidden bg-muted"
+        aria-label={`${medication.name} analysis`}
+      >
+        <span className="absolute left-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground shadow-sm">
+          {rank}
+        </span>
+        {medication.imageUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={medication.imageUrl}
+            alt={medication.name}
+            loading="lazy"
+            className="h-full w-full object-contain p-2 transition-transform duration-300 group-hover:scale-105"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center">
+            <Pill className="h-10 w-10 text-muted-foreground/30" />
+          </div>
+        )}
+      </Link>
+
+      {/* Body */}
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <Link
+          href={`/analysis/${medication.slug}`}
+          className="line-clamp-2 text-xs font-semibold leading-snug hover:text-primary"
+        >
+          {medication.name}
+        </Link>
+        {priceLabel && (
+          <p className="text-xs font-medium text-primary">{priceLabel}</p>
+        )}
+        <div className="mt-auto">
+          {primaryLink ? (
+            <a
+              href={`/api/click/${primaryLink.linkId}?ref=trend_article&rid=${trendId}`}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="flex w-full items-center justify-center gap-1 rounded-md bg-primary px-2 py-1.5 text-[11px] font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              <ShoppingCart className="h-3 w-3" />
+              Buy{primaryLink.retailerName ? ` · ${primaryLink.retailerName}` : ""}
+            </a>
+          ) : (
+            <Link
+              href={`/analysis/${medication.slug}`}
+              className="flex w-full items-center justify-center gap-1 rounded-md border bg-background px-2 py-1.5 text-[11px] font-medium transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              View analysis
+            </Link>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 

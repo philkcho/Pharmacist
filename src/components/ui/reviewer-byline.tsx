@@ -32,10 +32,10 @@ export function ReviewerByline({ lastReviewedAt, className = "" }: ReviewerBylin
         Reviewed by{" "}
         <a
           href={`mailto:${SITE_AUTHOR.email}`}
-          aria-label={`Email ${SITE_AUTHOR.name}`}
+          aria-label={`Email ${SITE_AUTHOR.honorific} ${SITE_AUTHOR.name}`}
           className="inline-flex items-center gap-1 font-medium text-foreground hover:text-primary hover:underline"
         >
-          {SITE_AUTHOR.name}
+          {SITE_AUTHOR.honorific} {SITE_AUTHOR.name}
           <Mail className="h-3.5 w-3.5" />
         </a>
       </span>

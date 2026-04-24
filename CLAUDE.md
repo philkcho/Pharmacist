@@ -53,10 +53,8 @@ Health & Beauty 트렌드를 AI로 분석하고, 라이선스를 보유한 약�
 ├── Related Products (조건부, 약사 승인 제품만)
 ├── Ingredient Deep Dive
 ├── Safety (FAERS 부작용, FDA 리콜, redFlags)
-├── People Ask Next (followUpQuestions)
 ├── Related Queries
 ├── Sources (tier 1/2/3 그룹핑)
-├── Limitations
 └── 본문 내 키워드 자동 링크 → /topics/[keyword]
 
 토픽 페이지 (/topics/[keyword])
@@ -168,7 +166,7 @@ Google Trends에서 수집한 트렌드 키워드. `status` 상태 머신: pendi
 3-Layer AI 분석 결과:
 - `understanding_jsonb` — Layer 1: topicType, entities, intent
 - `sources_jsonb` — Layer 2: SourceFragment[] (tier 1/2/3)
-- `synthesis_jsonb` — Layer 3: answer, leadExplanation, keyTakeaways, redFlags, trendDrivers, headline, claims, confidence, limitations, followUpQuestions
+- `synthesis_jsonb` — Layer 3: answer, leadExplanation, keyTakeaways, redFlags, trendDrivers, headline, claims, confidence
 - `product_matches_jsonb` — ProductMatch[]
 - `market_reaction_jsonb` — relatedQueries, velocityScore, topReactions (FAERS), activeRecalls, recentPubmedStudies
 
@@ -273,7 +271,6 @@ Dr.'s Analysis — YouTube 트랜스크립트를 원재료로 **AI PharmCare 자
 - `src/lib/actions/analysis.ts` — 제품 분석 페이지 데이터 (성분, 장단점, safety)
 - `src/lib/actions/retailers.ts` — 리테일러/구매 링크 CRUD
 - `src/lib/actions/purchase-links.ts` — autoGeneratePurchaseLinks (제품 저장 시 리테일러 검색 URL 자동 생성)
-- `src/lib/actions/articles.ts` — 약사 수동 아티클
 - `src/lib/actions/categories.ts` — 카테고리 CRUD
 - `src/lib/actions/expert-picks.ts` — YouTube 기반 Dr.'s Analysis (createExpertPick)
 - `src/lib/actions/product-batch.ts` — 시드 리스트 기반 제품 일괄 생성 (processProductBatch, getSeedProgress)
@@ -297,7 +294,6 @@ Dr.'s Analysis — YouTube 트랜스크립트를 원재료로 **AI PharmCare 자
 - `src/app/[locale]/(admin)/retailers/` — 리테일러 관리 (CRUD, 제휴 정보)
 - `src/app/[locale]/(admin)/medications/` — 제품 CRUD + Import Samples + Generate Images
 - `src/app/[locale]/(admin)/review-requests/` — 사용자 리뷰 요청 큐
-- `src/app/[locale]/(admin)/articles/` — 약사 아티클 관리
 - `src/app/[locale]/(admin)/expert-picks/` — Dr.'s Analysis 관리 (YouTube URL → AI 분석 → draft/publish)
 
 ### Chat Sidebar (공개 페이지 좌측 고정)

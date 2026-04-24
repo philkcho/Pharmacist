@@ -100,17 +100,6 @@ const SynthesisSchema = z.object({
     .describe(
       "Your self-assessed confidence. Report 'low' if you had to rely heavily on inference or the sources didn't actually speak to the question."
     ),
-  limitations: z
-    .array(z.string())
-    .describe(
-      "Known gaps that the user should know about. E.g. 'No data for pediatric dosing under 6', 'Sources are US-specific'. 0–4 items."
-    ),
-  followUpQuestions: z
-    .array(z.string())
-    .max(4)
-    .describe(
-      "0–4 short follow-up questions the user might want to ask next. Help them explore the topic without leaving the site."
-    ),
   leadExplanation: z
     .string()
     .describe(
@@ -248,7 +237,6 @@ Formatting rules:
   - The 'answer' field: inline markers like "[1][2]", 3–6 sentences.
   - The 'claims' array MUST mirror the 'answer' sentence-by-sentence (NOT the leadExplanation). Each claim's text should appear in the answer verbatim or near-verbatim.
   - 'claims' citations reference the same source indexes as the inline markers.
-  - followUpQuestions: 0–4 short natural questions a curious consumer might ask next.
 
 Prohibited:
   - Fabricating source content beyond what's in the QUOTE field.
@@ -422,8 +410,6 @@ export async function synthesizeAnalysis(
     answer: rawAnalysis.answer,
     claims: validClaims,
     confidence,
-    limitations: rawAnalysis.limitations,
-    followUpQuestions: rawAnalysis.followUpQuestions,
     leadExplanation: rawAnalysis.leadExplanation,
     keyTakeaways: rawAnalysis.keyTakeaways,
     redFlags: rawAnalysis.redFlags,
