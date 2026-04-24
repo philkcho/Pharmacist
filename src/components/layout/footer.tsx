@@ -31,15 +31,18 @@ export function Footer() {
             </span>
           </div>
 
-          <nav className="flex gap-4 text-sm text-muted-foreground">
+          <nav className="flex flex-wrap gap-4 text-sm text-muted-foreground">
             <Link href="/privacy" className="hover:text-foreground">
               Privacy Policy
             </Link>
             <Link href="/terms" className="hover:text-foreground">
               Terms of Service
             </Link>
-            <Link href="/editorial" className="hover:text-foreground">
-              Editorial Process
+            <Link href="/disclosure" className="hover:text-foreground">
+              Affiliate Disclosure
+            </Link>
+            <Link href="/about" className="hover:text-foreground">
+              About
             </Link>
           </nav>
         </div>

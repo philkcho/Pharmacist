@@ -176,11 +176,11 @@ export default function AboutPage() {
           Have a question, suggestion, or want to request a product analysis?
         </p>
         <a
-          href="mailto:choym92@gmail.com"
+          href="mailto:aipharmcare@gmail.com"
           className="mt-4 inline-flex items-center gap-2 text-primary hover:underline"
         >
           <Mail className="h-4 w-4" />
-          choym92@gmail.com
+          aipharmcare@gmail.com
         </a>
       </section>
 

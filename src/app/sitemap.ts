@@ -17,6 +17,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/trending`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/expert`, changeFrequency: "weekly", priority: 0.8 },
     { url: `${SITE_URL}/search`, changeFrequency: "weekly", priority: 0.4 },
+    { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE_URL}/terms`, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${SITE_URL}/disclosure`, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   // Published trend articles

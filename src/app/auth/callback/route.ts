@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 // Emails allowed to have pharmacist (admin) access.
 // Add new admin emails here.
 const ADMIN_EMAILS = [
+  "aipharmcare@gmail.com",
   "philkucho@gmail.com",
   "choym92@gmail.com",
 ];
