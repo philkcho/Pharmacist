@@ -5,7 +5,6 @@ import {
   ShieldCheck,
   FileWarning,
   ExternalLink,
-  Clock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -15,7 +14,6 @@ import {
   getMedicationsByCategorySlug,
   type CompareMedicationRow,
 } from "@/lib/actions/medications";
-import { getPublishedArticles } from "@/lib/actions/articles";
 
 interface PageProps {
   params: Promise<{ locale: string; "category-slug": string }>;
@@ -25,8 +23,8 @@ interface PageProps {
  * `/compare/[category-slug]` — public product comparison page.
  *
  * Shows a comparison table of featured medications in the category,
- * followed by the full product list and related pharmacist-reviewed
- * articles. Implements section 6.2 of docs/compare-feature.md.
+ * followed by the full product list. Implements section 6.2 of
+ * docs/compare-feature.md.
  */
 export default async function CompareCategoryPage({ params }: PageProps) {
   const { "category-slug": categorySlug } = await params;
@@ -40,25 +38,10 @@ export default async function CompareCategoryPage({ params }: PageProps) {
 
   if (!category) notFound();
 
-  const [medications, allArticles] = await Promise.all([
-    getMedicationsByCategorySlug(categorySlug),
-    getPublishedArticles(),
-  ]);
+  const medications = await getMedicationsByCategorySlug(categorySlug);
 
   const featured = medications.filter((m) => m.is_featured);
   const nonFeatured = medications.filter((m) => !m.is_featured);
-
-  const relatedArticles = allArticles
-    .filter((a) => {
-      const cat = a.category as
-        | { slug?: string }
-        | { slug?: string }[]
-        | null;
-      if (!cat) return false;
-      if (Array.isArray(cat)) return cat[0]?.slug === categorySlug;
-      return cat.slug === categorySlug;
-    })
-    .slice(0, 3);
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
@@ -167,39 +150,6 @@ export default async function CompareCategoryPage({ params }: PageProps) {
         </section>
       )}
 
-      {/* Related articles */}
-      {relatedArticles.length > 0 && (
-        <section className="mt-12 border-t pt-8">
-          <h2 className="text-xl font-semibold">Related guides</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Pharmacist-written articles about {category.name.toLowerCase()}.
-          </p>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {relatedArticles.map((article) => (
-              <Link key={article.id} href={`/${article.slug}`}>
-                <Card className="h-full transition-colors hover:bg-accent">
-                  <CardHeader>
-                    <CardTitle className="text-base leading-snug">
-                      {article.title}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {article.excerpt}
-                    </p>
-                    {article.reading_time_minutes && (
-                      <p className="mt-3 flex items-center gap-1 text-xs text-muted-foreground">
-                        <Clock className="h-3 w-3" />
-                        {article.reading_time_minutes} min read
-                      </p>
-                    )}
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
     </div>
   );
 }

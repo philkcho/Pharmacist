@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { isPharmacist } from "@/lib/actions/auth";
 import { fetchWeeklyTrends } from "@/lib/trends/google-trends-client";
 import { normalizeQuery, getMondayOfWeek } from "@/lib/trends/normalize";
 import { isDuplicateRecent } from "@/lib/trends/dedupe";
@@ -33,11 +34,19 @@ import type {
   AnalysisResult,
   MarketReaction,
   ProductMatch,
+  TopicUnderstanding,
 } from "@/lib/ai/types";
 
 // ============================================================
 // Ingestion result + row types
 // ============================================================
+
+export interface IngestedTrendPreview {
+  queryText: string;
+  category: TrendCategory;
+  rankType: "top" | "rising";
+  rankPosition: number | null;
+}
 
 export interface IngestionResult {
   insertedCount: number;
@@ -45,6 +54,8 @@ export interface IngestionResult {
   skippedEmptyCount: number;
   errors: string[];
   detectedWeek: string;
+  /** The actual trends that were inserted this run — for admin preview. */
+  insertedTrends: IngestedTrendPreview[];
 }
 
 export type TrendStatus =
@@ -152,6 +163,7 @@ export async function ingestWeeklyTrends(): Promise<IngestionResult> {
     skippedEmptyCount: 0,
     errors: [],
     detectedWeek,
+    insertedTrends: [],
   };
 
   let bundles;
@@ -214,6 +226,12 @@ export async function ingestWeeklyTrends(): Promise<IngestionResult> {
       }
 
       result.insertedCount++;
+      result.insertedTrends.push({
+        queryText: trend.query,
+        category: bundle.category,
+        rankType: trend.rankType,
+        rankPosition: trend.rankPosition,
+      });
     }
   }
 
@@ -276,9 +294,117 @@ export async function listTrendsByStatus(
   return (data as TrendTopicDbRow[] | null)?.map(dbRowToTopic) ?? [];
 }
 
+// ─── Admin review list (with analysis preview) ──────────────
+
+export type AdminTrendFilter =
+  | "pending_review" // status=published AND NOT pharmacist_reviewed — awaiting approval
+  | "live" // status=published AND pharmacist_reviewed — visible to public
+  | "pending"
+  | "analyzing"
+  | "rejected"
+  | "archived";
+
+export interface AdminTrendRow extends TrendTopicRow {
+  headline: string | null;
+  answer: string | null;
+  leadExplanation: string | null;
+  keyTakeaways: string[];
+  redFlags: string[];
+  confidence: "high" | "medium" | "low" | null;
+  sourceCount: number;
+  productMatchCount: number;
+}
+
+interface AdminTrendJoinedRow extends TrendTopicDbRow {
+  trend_analyses:
+    | {
+        synthesis_jsonb: unknown;
+        sources_jsonb: unknown;
+        product_matches_jsonb: unknown;
+      }
+    | null;
+}
+
+/**
+ * Admin-only list with synthesis preview for in-line review. Supports
+ * virtual filters "pending_review" (status=published, unreviewed) and
+ * "live" (status=published, reviewed) in addition to raw status filters.
+ */
+export async function listAdminTrends(
+  filter: AdminTrendFilter,
+  limit = 50
+): Promise<AdminTrendRow[]> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+
+  let query = admin
+    .from("trend_topics")
+    .select(
+      "*, trend_analyses(synthesis_jsonb, sources_jsonb, product_matches_jsonb)"
+    )
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  switch (filter) {
+    case "pending_review":
+      query = query.eq("status", "published").eq("pharmacist_reviewed", false);
+      break;
+    case "live":
+      query = query.eq("status", "published").eq("pharmacist_reviewed", true);
+      break;
+    case "pending":
+    case "analyzing":
+    case "rejected":
+    case "archived":
+      query = query.eq("status", filter);
+      break;
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("[trends] listAdminTrends failed:", error);
+    return [];
+  }
+
+  return ((data ?? []) as AdminTrendJoinedRow[]).map((row) => {
+    const topic = dbRowToTopic(row);
+    const synth = row.trend_analyses?.synthesis_jsonb as
+      | {
+          answer?: string;
+          leadExplanation?: string;
+          headline?: string;
+          keyTakeaways?: string[];
+          redFlags?: string[];
+          confidence?: "high" | "medium" | "low";
+        }
+      | null;
+    const sources = Array.isArray(row.trend_analyses?.sources_jsonb)
+      ? (row.trend_analyses!.sources_jsonb as unknown[])
+      : [];
+    const matches = Array.isArray(row.trend_analyses?.product_matches_jsonb)
+      ? (row.trend_analyses!.product_matches_jsonb as unknown[])
+      : [];
+
+    return {
+      ...topic,
+      headline: synth?.headline ?? null,
+      answer: synth?.answer ?? null,
+      leadExplanation: synth?.leadExplanation ?? null,
+      keyTakeaways: synth?.keyTakeaways ?? [],
+      redFlags: synth?.redFlags ?? [],
+      confidence: synth?.confidence ?? null,
+      sourceCount: sources.length,
+      productMatchCount: matches.length,
+    };
+  });
+}
+
 /**
  * List published trends with headline from synthesis for display
  * on homepage and trending index.
+ *
+ * Only pharmacist-reviewed trends surface publicly. AI-analyzed-but-
+ * unreviewed trends stay in the admin "Pending Review" queue.
  */
 export async function listPublishedTrendsWithHeadline(
   limit = 10
@@ -288,6 +414,7 @@ export async function listPublishedTrendsWithHeadline(
     .from("trend_topics")
     .select("*, trend_analyses(synthesis_jsonb)")
     .eq("status", "published")
+    .eq("pharmacist_reviewed", true)
     .order("created_at", { ascending: false })
     .limit(limit);
 
@@ -337,6 +464,10 @@ export interface AnalyzeTrendResult {
   outcome: "published" | "rejected" | "failed";
   reason?: string;
   slug?: string;
+  /** Original trend keyword (for admin preview listing). */
+  queryText?: string;
+  /** AI-generated headline when outcome === "published". */
+  headline?: string | null;
 }
 
 export interface AnalysisBatchResult {
@@ -481,7 +612,7 @@ export async function analyzeTrend(
       ? await matchProducts(
           understanding,
           trendRow.category as TrendCategory,
-          3
+          5
         ).catch((err) => {
           console.warn(
             `[trends] matchProducts failed for trend ${trendId}:`,
@@ -595,14 +726,26 @@ export async function analyzeTrend(
           `trend_topics publish update failed: ${updateError.message}`
         );
       }
-      return { trendId, outcome: "published", slug };
+      return {
+        trendId,
+        outcome: "published",
+        slug,
+        queryText: trendRow.query_text,
+        headline,
+      };
     } else {
+      // Persist the AI's refusal reason so the Rejected tab can explain
+      // why an item was auto-rejected (e.g. "no OTC ADHD medications
+      // exist", "insufficient evidence", "medical-advice request").
+      const refusalReason = synthesisResult.refusal.reason ?? null;
       const { error: updateError } = await admin
         .from("trend_topics")
         .update({
           status: "rejected",
           analyzed_at: now,
-          analysis_error: null,
+          analysis_error: refusalReason
+            ? `AI refusal: ${refusalReason}`.slice(0, 500)
+            : null,
         })
         .eq("id", trendId);
       if (updateError) {
@@ -613,7 +756,8 @@ export async function analyzeTrend(
       return {
         trendId,
         outcome: "rejected",
-        reason: synthesisResult.refusal.reason,
+        reason: refusalReason ?? undefined,
+        queryText: trendRow.query_text,
       };
     }
   } catch (err) {
@@ -628,7 +772,12 @@ export async function analyzeTrend(
         analysis_error: message.slice(0, 500),
       })
       .eq("id", trendId);
-    return { trendId, outcome: "failed", reason: message };
+    return {
+      trendId,
+      outcome: "failed",
+      reason: message,
+      queryText: trendRow.query_text,
+    };
   }
 }
 
@@ -698,6 +847,276 @@ export async function triggerTrendAnalysis(
   const result = await analyzePendingTrends(limit);
   revalidatePath("/trends");
   return result;
+}
+
+// ============================================================
+// Admin review workflow — publish / unpublish / reject
+// ============================================================
+
+/**
+ * Mark an AI-analyzed trend as pharmacist-reviewed so it surfaces on
+ * the public homepage and /trending index. Idempotent — re-running
+ * on an already-reviewed trend is a no-op.
+ *
+ * Only callable by pharmacists. Revalidates home + trending pages so
+ * readers see the new post within seconds.
+ */
+export async function publishTrend(
+  trendId: number
+): Promise<{ success: boolean; error?: string }> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+
+  const { data: current, error: loadErr } = await admin
+    .from("trend_topics")
+    .select("status, slug")
+    .eq("id", trendId)
+    .maybeSingle<{ status: string; slug: string | null }>();
+
+  if (loadErr || !current) {
+    return { success: false, error: loadErr?.message ?? "Trend not found" };
+  }
+  if (current.status !== "published") {
+    return {
+      success: false,
+      error: `Trend must be in 'published' status to be reviewed (current: ${current.status}).`,
+    };
+  }
+
+  const now = new Date().toISOString();
+  const { error: updErr } = await admin
+    .from("trend_topics")
+    .update({
+      pharmacist_reviewed: true,
+      reviewed_at: now,
+      published_at: now, // refresh timestamp so the post surfaces as new
+    })
+    .eq("id", trendId);
+
+  if (updErr) return { success: false, error: updErr.message };
+
+  revalidatePath("/");
+  revalidatePath("/trending");
+  if (current.slug) revalidatePath(`/trending/${current.slug}`);
+  revalidatePath("/trends");
+  return { success: true };
+}
+
+/**
+ * Demote a live trend back to draft (hide from public). Keeps the
+ * analysis + published status intact so it can be republished with
+ * one click later. Use this when a post needs a correction or is
+ * suspected to be stale.
+ */
+export async function unpublishTrend(
+  trendId: number
+): Promise<{ success: boolean; error?: string }> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+
+  const { data: current } = await admin
+    .from("trend_topics")
+    .select("slug")
+    .eq("id", trendId)
+    .maybeSingle<{ slug: string | null }>();
+
+  const { error: updErr } = await admin
+    .from("trend_topics")
+    .update({ pharmacist_reviewed: false })
+    .eq("id", trendId);
+
+  if (updErr) return { success: false, error: updErr.message };
+
+  revalidatePath("/");
+  revalidatePath("/trending");
+  if (current?.slug) revalidatePath(`/trending/${current.slug}`);
+  revalidatePath("/trends");
+  return { success: true };
+}
+
+/**
+ * Run the full Layer 1→2→3 pipeline on a single pending trend. Used
+ * by the admin "Analyze this one" button. Wraps analyzeTrend() with
+ * the pharmacist auth check + revalidation.
+ */
+export async function triggerSingleAnalysis(
+  trendId: number
+): Promise<AnalyzeTrendResult> {
+  await assertPharmacist();
+  const result = await analyzeTrend(trendId);
+  revalidatePath("/trends");
+  return result;
+}
+
+// ─── Backfill: re-match up to 5 products per existing analysis ──
+
+export interface BackfillResult {
+  scanned: number;
+  updated: number;
+  skipped: number;
+  errors: string[];
+}
+
+/**
+ * Re-run `matchProducts()` with limit=5 against every trend that already
+ * has a completed analysis (status=published or rejected). Updates the
+ * cached `product_matches_jsonb` in-place so the public trend page can
+ * surface 5 recommended products for older articles that were analyzed
+ * when the cap was 3.
+ *
+ * Idempotent: re-running is safe. No AI calls — matchProducts is a DB
+ * lookup against approved medications, so cost is low. Default limit of
+ * 100 covers every trend in a single click for most sites; adjust higher
+ * if you know you have more.
+ */
+export async function backfillTrendProductMatches(
+  limit = 100
+): Promise<BackfillResult> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+  const result: BackfillResult = {
+    scanned: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  // Fetch analyses with their parent trend's category + status
+  const { data: rows, error } = await admin
+    .from("trend_analyses")
+    .select(
+      "trend_topic_id, understanding_jsonb, product_matches_jsonb, trend_topics!inner(id, status, category)"
+    )
+    .in("trend_topics.status", ["published", "rejected"])
+    .order("trend_topic_id", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    result.errors.push(`analyses load failed: ${error.message}`);
+    return result;
+  }
+
+  for (const row of rows ?? []) {
+    result.scanned++;
+    const topic = Array.isArray(row.trend_topics)
+      ? row.trend_topics[0]
+      : row.trend_topics;
+    if (!topic) {
+      result.skipped++;
+      continue;
+    }
+
+    const understanding = row.understanding_jsonb as TopicUnderstanding | null;
+    if (!understanding || !understanding.entities) {
+      result.skipped++;
+      continue;
+    }
+
+    try {
+      const newMatches = await matchProducts(
+        understanding,
+        topic.category as TrendCategory,
+        5
+      );
+
+      const oldMatches = Array.isArray(row.product_matches_jsonb)
+        ? (row.product_matches_jsonb as ProductMatch[])
+        : [];
+      if (
+        oldMatches.length === newMatches.length &&
+        oldMatches.every((m, i) => m.medicationId === newMatches[i]?.medicationId)
+      ) {
+        result.skipped++;
+        continue;
+      }
+
+      const { error: updErr } = await admin
+        .from("trend_analyses")
+        .update({ product_matches_jsonb: newMatches })
+        .eq("trend_topic_id", row.trend_topic_id);
+
+      if (updErr) {
+        result.errors.push(
+          `trend #${topic.id}: update failed: ${updErr.message}`
+        );
+        continue;
+      }
+
+      result.updated++;
+    } catch (err) {
+      result.errors.push(
+        `trend #${topic.id}: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/trending");
+  return result;
+}
+
+/**
+ * Hard-delete a trend (and its trend_analyses via FK cascade). Use
+ * for raw-pending rows that aren't worth analyzing — keyword noise,
+ * irrelevant to health/beauty, etc. Prefer rejectTrend() for already-
+ * analyzed drafts so we keep the synthesis for audit.
+ */
+export async function deleteTrend(
+  trendId: number
+): Promise<{ success: boolean; error?: string }> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+
+  // Remove child rows first in case the FK is not ON DELETE CASCADE.
+  await admin.from("trend_analyses").delete().eq("trend_topic_id", trendId);
+
+  const { error } = await admin
+    .from("trend_topics")
+    .delete()
+    .eq("id", trendId);
+
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath("/trends");
+  revalidatePath("/");
+  revalidatePath("/trending");
+  return { success: true };
+}
+
+/**
+ * Reject a trend — status moves to 'rejected' and it drops out of
+ * both the admin Pending Review queue and all public queries. The
+ * underlying analysis row is preserved in case we want to audit.
+ */
+export async function rejectTrend(
+  trendId: number,
+  reason?: string
+): Promise<{ success: boolean; error?: string }> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+
+  const { data: current } = await admin
+    .from("trend_topics")
+    .select("slug")
+    .eq("id", trendId)
+    .maybeSingle<{ slug: string | null }>();
+
+  const { error: updErr } = await admin
+    .from("trend_topics")
+    .update({
+      status: "rejected",
+      pharmacist_reviewed: false,
+      analysis_error: reason ? `Rejected by reviewer: ${reason}`.slice(0, 500) : null,
+    })
+    .eq("id", trendId);
+
+  if (updErr) return { success: false, error: updErr.message };
+
+  revalidatePath("/");
+  revalidatePath("/trending");
+  if (current?.slug) revalidatePath(`/trending/${current.slug}`);
+  revalidatePath("/trends");
+  return { success: true };
 }
 
 // ============================================================
@@ -775,11 +1194,16 @@ interface TrendAnalysisDbRow {
  *
  * Uses the public Supabase client — RLS policies restrict to
  * `status = 'published'` rows for anon/authenticated users.
+ *
+ * Admins (pharmacists) get a bypass: they see reviewed AND unreviewed
+ * drafts so they can preview AI-generated content before approving it
+ * via the admin queue.
  */
 export async function getTrendBySlug(
   slug: string
 ): Promise<TrendPageData | null> {
   const supabase = await createClient();
+  const isAdmin = await isPharmacist();
 
   // 1. Fetch trend_topics by slug (RLS allows published only).
   const { data: topicData, error: topicError } = await supabase
@@ -789,6 +1213,11 @@ export async function getTrendBySlug(
     .maybeSingle<TrendTopicDbRow>();
 
   if (topicError || !topicData) return null;
+
+  // Gate unreviewed drafts to admins only. Public readers hit 404.
+  if (!topicData.pharmacist_reviewed && !isAdmin) {
+    return null;
+  }
 
   const topic = dbRowToTopic(topicData);
 
@@ -920,7 +1349,9 @@ export async function getTrendBySlug(
 }
 
 /**
- * Return all published trend slugs for `generateStaticParams`.
+ * Return all reviewed+published trend slugs for `generateStaticParams`
+ * and sitemap generation. Unreviewed drafts are excluded so they don't
+ * show up in the public sitemap.
  */
 export async function getPublishedTrendSlugs(): Promise<string[]> {
   // Use admin client because generateStaticParams runs at build
@@ -930,6 +1361,7 @@ export async function getPublishedTrendSlugs(): Promise<string[]> {
     .from("trend_topics")
     .select("slug")
     .eq("status", "published")
+    .eq("pharmacist_reviewed", true)
     .not("slug", "is", null);
 
   return (data ?? [])

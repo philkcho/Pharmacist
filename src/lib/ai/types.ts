@@ -123,10 +123,6 @@ export interface Analysis {
   /** Same content as `answer`, segmented per sentence with citation validation. */
   claims: Claim[];
   confidence: "high" | "medium" | "low";
-  /** Known gaps, e.g. "No data for pediatric use under 6". */
-  limitations: string[];
-  /** 0–4 suggested follow-up questions, consumed by the UI chip row. */
-  followUpQuestions: string[];
   /**
    * ~200–250 word plain-English lead for the trending article page
    * (section 1 "The 1-Minute Read"). Must cover: what it is, who

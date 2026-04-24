@@ -19,13 +19,6 @@ import {
 import { relations, sql } from "drizzle-orm";
 
 // Enums
-export const articleStatusEnum = pgEnum("article_status", [
-  "draft",
-  "in_review",
-  "published",
-  "archived",
-]);
-
 export const appRoleEnum = pgEnum("app_role", ["pharmacist", "user"]);
 
 // Lookup result classification (matches migration 004).
@@ -316,70 +309,6 @@ export const medicationReferences = pgTable(
   ]
 );
 
-// Articles
-export const articles = pgTable(
-  "articles",
-  {
-    id: bigint({ mode: "number" }).primaryKey().generatedAlwaysAsIdentity(),
-    title: text().notNull(),
-    slug: text().notNull().unique(),
-    excerpt: text(),
-    content: jsonb().notNull().default({}),
-    status: articleStatusEnum().notNull().default("draft"),
-    categoryId: bigint("category_id", { mode: "number" }).references(
-      () => categories.id,
-      { onDelete: "set null" }
-    ),
-    authorId: uuid("author_id")
-      .notNull()
-      .references(() => pharmacistProfiles.id, { onDelete: "restrict" }),
-    featuredImage: text("featured_image"),
-    seoTitle: text("seo_title"),
-    seoDescription: text("seo_description"),
-    seoKeywords: text("seo_keywords").array(),
-    canonicalUrl: text("canonical_url"),
-    publishedAt: timestamp("published_at", { withTimezone: true }),
-    reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
-    reviewedBy: uuid("reviewed_by").references(() => pharmacistProfiles.id),
-    isAiDrafted: boolean("is_ai_drafted").notNull().default(false),
-    aiModel: text("ai_model"),
-    readingTimeMinutes: integer("reading_time_minutes"),
-    viewCount: bigint("view_count", { mode: "number" }).notNull().default(0),
-    createdAt: timestamp("created_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow(),
-  },
-  (table) => [
-    index("idx_articles_status").on(table.status),
-    index("idx_articles_author").on(table.authorId),
-    index("idx_articles_category").on(table.categoryId),
-    index("idx_articles_published").on(table.publishedAt),
-  ]
-);
-
-// Article-Medication Junction
-export const articleMedications = pgTable(
-  "article_medications",
-  {
-    articleId: bigint("article_id", { mode: "number" })
-      .notNull()
-      .references(() => articles.id, { onDelete: "cascade" }),
-    medicationId: bigint("medication_id", { mode: "number" })
-      .notNull()
-      .references(() => medications.id, { onDelete: "cascade" }),
-    sortOrder: integer("sort_order").notNull().default(0),
-    isRecommended: boolean("is_recommended").notNull().default(true),
-    recommendationNote: text("recommendation_note"),
-  },
-  (table) => [
-    primaryKey({ columns: [table.articleId, table.medicationId] }),
-    index("idx_article_medications_med").on(table.medicationId),
-  ]
-);
-
 // Product Lookups — every lookup attempt from the home widget.
 // Used for analytics, miss-rate tracking, and as the seed table for
 // lookup_review_requests below. Anonymous users can INSERT (to log
@@ -545,23 +474,14 @@ export const categoriesRelations = relations(categories, ({ one, many }) => ({
     relationName: "categoryHierarchy",
   }),
   children: many(categories, { relationName: "categoryHierarchy" }),
-  articles: many(articles),
   medications: many(medications),
 }));
-
-export const pharmacistProfilesRelations = relations(
-  pharmacistProfiles,
-  ({ many }) => ({
-    articles: many(articles),
-  })
-);
 
 export const medicationsRelations = relations(medications, ({ one, many }) => ({
   category: one(categories, {
     fields: [medications.categoryId],
     references: [categories.id],
   }),
-  articleMedications: many(articleMedications),
   references: many(medicationReferences),
   purchaseLinks: many(productPurchaseLinks),
   reviewedBy: one(pharmacistProfiles, {
@@ -575,32 +495,6 @@ export const medicationReferencesRelations = relations(
   ({ one }) => ({
     medication: one(medications, {
       fields: [medicationReferences.medicationId],
-      references: [medications.id],
-    }),
-  })
-);
-
-export const articlesRelations = relations(articles, ({ one, many }) => ({
-  category: one(categories, {
-    fields: [articles.categoryId],
-    references: [categories.id],
-  }),
-  author: one(pharmacistProfiles, {
-    fields: [articles.authorId],
-    references: [pharmacistProfiles.id],
-  }),
-  articleMedications: many(articleMedications),
-}));
-
-export const articleMedicationsRelations = relations(
-  articleMedications,
-  ({ one }) => ({
-    article: one(articles, {
-      fields: [articleMedications.articleId],
-      references: [articles.id],
-    }),
-    medication: one(medications, {
-      fields: [articleMedications.medicationId],
       references: [medications.id],
     }),
   })

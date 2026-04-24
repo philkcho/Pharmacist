@@ -16,11 +16,9 @@ import {
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
-  FileText,
   FolderOpen,
   Pill,
   ExternalLink,
-  Sparkles,
   Inbox,
   TrendingUp,
   Store,
@@ -51,8 +49,6 @@ const menuGroups: {
     items: [
       { title: "Dr.'s Analysis", href: "/expert-picks", icon: Play },
       { title: "Consult Queue", href: "/consult-queue", icon: MessageSquare },
-      { title: "Articles", href: "/articles", icon: FileText },
-      { title: "Generate Article", href: "/articles/generate", icon: Sparkles },
       { title: "Trends", href: "/trends", icon: TrendingUp },
     ],
   },
@@ -77,18 +73,10 @@ const menuGroups: {
   },
 ];
 
-// `usePathname()` returns the locale-prefixed path (e.g. /en/articles). Strip
-// that prefix before matching, and keep /articles from lighting up when the
-// user is actually on /articles/generate.
+// `usePathname()` returns the locale-prefixed path (e.g. /en/trends). Strip
+// that prefix before matching.
 function isActiveRoute(pathname: string, href: string): boolean {
   const stripped = pathname.replace(/^\/[a-z]{2}(?=\/|$)/, "") || "/";
-  if (href === "/articles") {
-    return (
-      stripped === "/articles" ||
-      (stripped.startsWith("/articles/") &&
-        !stripped.startsWith("/articles/generate"))
-    );
-  }
   return stripped === href || stripped.startsWith(href + "/");
 }
 
