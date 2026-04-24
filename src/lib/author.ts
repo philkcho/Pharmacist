@@ -13,7 +13,7 @@ export const SITE_AUTHOR = {
   credentials: "PharmD",
   displayName: "Dr. Younghun Cho, PharmD",
   shortDisplayName: "Dr. Cho",
-  email: "aipharmcare@gmail.com",
+  email: "hello@aipharmcare.com",
   // Retained for JSON-LD sameAs only — not rendered in UI anymore.
   linkedinUrl: "https://www.linkedin.com/in/younghun-cho-71b36a241/",
 } as const;
