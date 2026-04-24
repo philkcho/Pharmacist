@@ -52,9 +52,6 @@ export const metadata: Metadata = {
       "max-image-preview": "large",
     },
   },
-  verification: {
-    google: "3WA8CWhVp2X3YIMf-j8y-szdsEo-3Jds8TZcP-8Ae-Q",
-  },
 };
 
 export default async function LocaleLayout({
