@@ -32,6 +32,7 @@ import {
   unpublishTrend,
   rejectTrend,
   backfillTrendProductMatches,
+  backfillProductGroups,
   type IngestionResult,
   type AnalysisBatchResult,
   type BackfillResult,
@@ -223,6 +224,25 @@ export function TrendsClient({
     });
   };
 
+  const handleBackfillGroups = () => {
+    if (isPending) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await backfillProductGroups(25);
+        setLastBackfillResult(result);
+        setLastIngestionResult(null);
+        setLastAnalysisResult(null);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : "Product groups backfill failed. Try again."
+        );
+      }
+    });
+  };
+
   const removeLocally = (id: number) => {
     setTrends((rows) => rows.filter((r) => r.id !== id));
   };
@@ -255,7 +275,7 @@ export function TrendsClient({
   return (
     <div className="space-y-6">
       {/* Manual triggers */}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <div className="flex flex-col gap-3 rounded-md border bg-card p-4">
           <div>
             <p className="text-sm font-semibold">Run weekly ingestion</p>
@@ -308,11 +328,13 @@ export function TrendsClient({
 
         <div className="flex flex-col gap-3 rounded-md border bg-card p-4">
           <div>
-            <p className="text-sm font-semibold">Backfill product matches</p>
+            <p className="text-sm font-semibold">Backfill all articles</p>
             <p className="mt-1 text-xs text-muted-foreground">
-              Re-runs product matching on every analyzed trend with the new
-              top-5 cap. One click covers all articles already on the
-              homepage. Idempotent · no AI cost.
+              Full refresh per article: match top-5 → auto-create missing
+              products via Gemini+ensureComplete → regenerate role groups
+              (Morning/Evening/Moisturize). One click does everything and
+              revalidates the page so readers see the update. AI cost
+              incurred for creation+groups.
             </p>
           </div>
           <Button
@@ -329,6 +351,32 @@ export function TrendsClient({
               <Sparkles className="mr-2 h-4 w-4" />
             )}
             Backfill all articles
+          </Button>
+        </div>
+
+        <div className="flex flex-col gap-3 rounded-md border bg-card p-4">
+          <div>
+            <p className="text-sm font-semibold">Backfill product groups</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Asks Gemini to group the matched products into Morning /
+              Evening / Moisturize etc. buckets for each analyzed trend.
+              Processes 25 per click. <strong>Gemini cost</strong>.
+            </p>
+          </div>
+          <Button
+            type="button"
+            onClick={handleBackfillGroups}
+            disabled={isPending}
+            variant="outline"
+            size="sm"
+            className="self-start"
+          >
+            {isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-4 w-4" />
+            )}
+            Backfill groups
           </Button>
         </div>
       </div>

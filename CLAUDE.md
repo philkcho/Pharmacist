@@ -50,7 +50,10 @@ Health & Beauty 트렌드를 AI로 분석하고, 라이선스를 보유한 약�
 ├── Hook (rank, velocity, trend drivers)
 ├── 1-Minute Read (200-250 단어 leadExplanation)
 ├── Key Takeaways (3-5 bullets)
-├── Related Products (조건부, 약사 승인 제품만)
+├── Recommended Products (조건부, 약사 승인 제품만, 최대 5개)
+│   ├── (default) Role-grouped — synthesis.productGroups 기준 2-4 그룹, 각 1-2 제품
+│   │   └── 예: "Morning sunscreen" / "Evening treatment" / "Daily moisturizer"
+│   └── (fallback) Flat top-5 — productGroups 비어있거나 <2 제품일 때
 ├── Ingredient Deep Dive
 ├── Safety (FAERS 부작용, FDA 리콜, redFlags)
 ├── Related Queries
@@ -166,7 +169,7 @@ Google Trends에서 수집한 트렌드 키워드. `status` 상태 머신: pendi
 3-Layer AI 분석 결과:
 - `understanding_jsonb` — Layer 1: topicType, entities, intent
 - `sources_jsonb` — Layer 2: SourceFragment[] (tier 1/2/3)
-- `synthesis_jsonb` — Layer 3: answer, leadExplanation, keyTakeaways, redFlags, trendDrivers, headline, claims, confidence
+- `synthesis_jsonb` — Layer 3: answer, leadExplanation, keyTakeaways, redFlags, trendDrivers, headline, claims, confidence, **productGroups?** (선택 — role 라벨 기반 2-4 그룹, 각 1-2 medicationId, 총 ≤5)
 - `product_matches_jsonb` — ProductMatch[]
 - `market_reaction_jsonb` — relatedQueries, velocityScore, topReactions (FAERS), activeRecalls, recentPubmedStudies
 

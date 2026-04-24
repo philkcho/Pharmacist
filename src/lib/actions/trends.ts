@@ -608,7 +608,7 @@ export async function analyzeTrend(
       trendRow.category === "beauty_fitness" ||
       PHARMA_PRODUCT_TYPES.has(understanding.topicType);
 
-    const productMatches: ProductMatch[] = shouldMatchProducts
+    let productMatches: ProductMatch[] = shouldMatchProducts
       ? await matchProducts(
           understanding,
           trendRow.category as TrendCategory,
@@ -621,6 +621,72 @@ export async function analyzeTrend(
           return [] as ProductMatch[];
         })
       : [];
+
+    // Fallback: if the matchProducts query came back with fewer than 5,
+    // ask Gemini to suggest real brand-name products, hand each to
+    // ensureProductComplete (which auto-approves on AI success), then
+    // APPEND the ensured products directly to productMatches. We skip
+    // re-calling matchProducts because its ILIKE substring logic often
+    // misses (e.g. article entity "retinoid" != product genericName
+    // "retinol"). Direct append guarantees newly-created products land
+    // in the matches list.
+    if (shouldMatchProducts && productMatches.length < 5) {
+      const deficit = 5 - productMatches.length;
+      try {
+        const { suggestTrendProducts } = await import(
+          "@/lib/ai/suggest-trend-products"
+        );
+        const { ensureProductComplete } = await import(
+          "@/lib/actions/ensure-product-complete"
+        );
+
+        const suggestions = await suggestTrendProducts({
+          understanding,
+          category: trendRow.category as TrendCategory,
+          existingProductNames: productMatches.map((m) => m.name),
+          count: deficit,
+        });
+
+        if (suggestions.length > 0) {
+          console.log(
+            `[trends] trend ${trendId}: ${productMatches.length} matched, creating ${suggestions.length} via fallback`
+          );
+
+          const existingIds = new Set(productMatches.map((m) => m.medicationId));
+          for (const s of suggestions) {
+            if (productMatches.length >= 5) break;
+            try {
+              const ensured = await ensureProductComplete({
+                name: s.name,
+                genericName: s.genericName,
+                productType: s.productType,
+                categorySlug: understanding.entities.categorySlugs[0] ?? null,
+              });
+              if (!ensured || existingIds.has(ensured.id)) continue;
+              existingIds.add(ensured.id);
+              productMatches.push({
+                medicationId: ensured.id,
+                name: ensured.name,
+                slug: ensured.slug,
+                reason: `AI-suggested: ${s.rationale}`,
+                ingredientHighlights: s.genericName ? [s.genericName] : [],
+              });
+            } catch (err) {
+              console.warn(
+                `[trends] ensureProductComplete failed for "${s.name}":`,
+                err instanceof Error ? err.message : err
+              );
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(
+          `[trends] product fallback failed for trend ${trendId}:`,
+          err instanceof Error ? err.message : err
+        );
+      }
+    }
+
     const marketReaction: MarketReaction = {
       relatedQueries: [],
     };
@@ -958,16 +1024,23 @@ export interface BackfillResult {
 }
 
 /**
- * Re-run `matchProducts()` with limit=5 against every trend that already
- * has a completed analysis (status=published or rejected). Updates the
- * cached `product_matches_jsonb` in-place so the public trend page can
- * surface 5 recommended products for older articles that were analyzed
- * when the cap was 3.
+ * Full per-trend refresh pipeline used by the admin "Backfill all articles"
+ * button. For every analyzed trend (status=published or rejected):
  *
- * Idempotent: re-running is safe. No AI calls — matchProducts is a DB
- * lookup against approved medications, so cost is low. Default limit of
- * 100 covers every trend in a single click for most sites; adjust higher
- * if you know you have more.
+ *   1. Re-run matchProducts with limit=5
+ *   2. If <5 matches, ask Gemini for real brand-name suggestions and
+ *      create each via ensureProductComplete (auto-approves on AI success)
+ *   3. Re-run matchProducts to pick up newly-created rows
+ *   4. Persist updated `product_matches_jsonb`
+ *   5. If ≥2 products, re-run synthesizeAnalysis to regenerate productGroups
+ *      (role buckets: Morning / Evening / Moisturize etc.)
+ *   6. Persist updated `synthesis_jsonb`
+ *   7. Revalidate the trend's public path so readers see the changes
+ *
+ * Result: after one click, every existing article has top-5 products
+ * AND role-grouped Recommended Products section rendering on the page.
+ *
+ * Idempotent: matches that already look up-to-date are skipped.
  */
 export async function backfillTrendProductMatches(
   limit = 100
@@ -981,11 +1054,11 @@ export async function backfillTrendProductMatches(
     errors: [],
   };
 
-  // Fetch analyses with their parent trend's category + status
+  // Fetch analyses with their parent trend's category + status + slug
   const { data: rows, error } = await admin
     .from("trend_analyses")
     .select(
-      "trend_topic_id, understanding_jsonb, product_matches_jsonb, trend_topics!inner(id, status, category)"
+      "trend_topic_id, understanding_jsonb, sources_jsonb, synthesis_jsonb, product_matches_jsonb, market_reaction_jsonb, trend_topics!inner(id, slug, status, category)"
     )
     .in("trend_topics.status", ["published", "rejected"])
     .order("trend_topic_id", { ascending: false })
@@ -995,6 +1068,8 @@ export async function backfillTrendProductMatches(
     result.errors.push(`analyses load failed: ${error.message}`);
     return result;
   }
+
+  const updatedSlugs: string[] = [];
 
   for (const row of rows ?? []) {
     result.scanned++;
@@ -1013,45 +1088,307 @@ export async function backfillTrendProductMatches(
     }
 
     try {
-      const newMatches = await matchProducts(
+      let newMatches = await matchProducts(
         understanding,
         topic.category as TrendCategory,
         5
       );
 
+      // Same fallback as analyzeTrend: create missing products via
+      // Gemini + ensureProductComplete, and append directly (skip
+      // re-matching — ILIKE often misses new products).
+      if (newMatches.length < 5) {
+        const deficit = 5 - newMatches.length;
+        try {
+          const { suggestTrendProducts } = await import(
+            "@/lib/ai/suggest-trend-products"
+          );
+          const { ensureProductComplete } = await import(
+            "@/lib/actions/ensure-product-complete"
+          );
+          const suggestions = await suggestTrendProducts({
+            understanding,
+            category: topic.category as TrendCategory,
+            existingProductNames: newMatches.map((m) => m.name),
+            count: deficit,
+          });
+          const existingIds = new Set(newMatches.map((m) => m.medicationId));
+          for (const s of suggestions) {
+            if (newMatches.length >= 5) break;
+            try {
+              const ensured = await ensureProductComplete({
+                name: s.name,
+                genericName: s.genericName,
+                productType: s.productType,
+                categorySlug:
+                  understanding.entities.categorySlugs[0] ?? null,
+              });
+              if (!ensured || existingIds.has(ensured.id)) continue;
+              existingIds.add(ensured.id);
+              newMatches.push({
+                medicationId: ensured.id,
+                name: ensured.name,
+                slug: ensured.slug,
+                reason: `AI-suggested: ${s.rationale}`,
+                ingredientHighlights: s.genericName ? [s.genericName] : [],
+              });
+            } catch (err) {
+              console.warn(
+                `[backfill] ensureProductComplete failed for "${s.name}":`,
+                err instanceof Error ? err.message : err
+              );
+            }
+          }
+        } catch (err) {
+          console.warn(
+            `[backfill] fallback failed for trend ${topic.id}:`,
+            err instanceof Error ? err.message : err
+          );
+        }
+      }
+
       const oldMatches = Array.isArray(row.product_matches_jsonb)
         ? (row.product_matches_jsonb as ProductMatch[])
         : [];
-      if (
-        oldMatches.length === newMatches.length &&
-        oldMatches.every((m, i) => m.medicationId === newMatches[i]?.medicationId)
-      ) {
+      const matchesChanged =
+        oldMatches.length !== newMatches.length ||
+        !oldMatches.every(
+          (m, i) => m.medicationId === newMatches[i]?.medicationId
+        );
+
+      const existingSynthesis = row.synthesis_jsonb as
+        | { productGroups?: unknown[] }
+        | null;
+      const hasGroups =
+        existingSynthesis &&
+        Array.isArray(existingSynthesis.productGroups) &&
+        existingSynthesis.productGroups.length > 0;
+
+      // Need groups if matches changed OR groups missing, and we have
+      // enough products to form one.
+      const needsGroupsRegen =
+        newMatches.length >= 2 && (matchesChanged || !hasGroups);
+
+      // Skip if nothing would change
+      if (!matchesChanged && !needsGroupsRegen) {
         result.skipped++;
         continue;
       }
 
-      const { error: updErr } = await admin
-        .from("trend_analyses")
-        .update({ product_matches_jsonb: newMatches })
-        .eq("trend_topic_id", row.trend_topic_id);
+      // 1) Persist updated matches if changed
+      if (matchesChanged) {
+        const { error: updErr } = await admin
+          .from("trend_analyses")
+          .update({ product_matches_jsonb: newMatches })
+          .eq("trend_topic_id", row.trend_topic_id);
+        if (updErr) {
+          result.errors.push(
+            `trend #${topic.id} (${topic.slug ?? "no-slug"}): matches update failed: ${updErr.message}`
+          );
+          continue;
+        }
+      }
 
-      if (updErr) {
-        result.errors.push(
-          `trend #${topic.id}: update failed: ${updErr.message}`
-        );
-        continue;
+      // 2) Regenerate synthesis to produce productGroups if needed
+      if (needsGroupsRegen) {
+        const understandingForSynth = understanding;
+        const sources = Array.isArray(row.sources_jsonb)
+          ? (row.sources_jsonb as import("@/lib/ai/types").SourceFragment[])
+          : [];
+        if (sources.length > 0) {
+          const marketReaction =
+            row.market_reaction_jsonb &&
+            typeof row.market_reaction_jsonb === "object"
+              ? (row.market_reaction_jsonb as MarketReaction)
+              : undefined;
+          try {
+            const synthRes = await synthesizeAnalysis({
+              understanding: understandingForSynth,
+              sources,
+              productMatches: newMatches,
+              marketReaction,
+              categoryHint: topic.category as string,
+            });
+            if (synthRes.kind === "analysis") {
+              await admin
+                .from("trend_analyses")
+                .update({ synthesis_jsonb: synthRes.analysis })
+                .eq("trend_topic_id", row.trend_topic_id);
+            }
+          } catch (err) {
+            // Non-fatal — matches still persist; groups remain missing
+            console.warn(
+              `[backfill] groups regen failed for trend ${topic.id}:`,
+              err instanceof Error ? err.message : err
+            );
+          }
+        }
       }
 
       result.updated++;
+      if (topic.slug) updatedSlugs.push(topic.slug as string);
     } catch (err) {
       result.errors.push(
-        `trend #${topic.id}: ${err instanceof Error ? err.message : String(err)}`
+        `trend #${topic.id} (${topic.slug ?? "no-slug"}): ${err instanceof Error ? err.message : String(err)}`
       );
     }
   }
 
   revalidatePath("/");
   revalidatePath("/trending");
+  for (const slug of updatedSlugs) {
+    revalidatePath(`/trending/${slug}`);
+  }
+  return result;
+}
+
+/**
+ * Re-run `synthesizeAnalysis()` on every analyzed trend that's missing
+ * `synthesis_jsonb.productGroups`. Rebuilds the full Analysis so Gemini
+ * can group the already-matched products into 2-4 role buckets
+ * (Morning / Evening / Moisturize / Take-with-food etc.).
+ *
+ * Cost: Gemini 2.5 Pro call × N trends. Roughly $0.001-0.003 each.
+ * Default limit 25 → ~$0.08 per full click.
+ *
+ * Idempotent: rows that already have productGroups are skipped.
+ */
+export async function backfillProductGroups(
+  limit = 25
+): Promise<BackfillResult> {
+  await assertPharmacist();
+  const admin = createAdminClient();
+  const result: BackfillResult = {
+    scanned: 0,
+    updated: 0,
+    skipped: 0,
+    errors: [],
+  };
+
+  const { data: rows, error } = await admin
+    .from("trend_analyses")
+    .select(
+      "trend_topic_id, understanding_jsonb, sources_jsonb, synthesis_jsonb, product_matches_jsonb, market_reaction_jsonb, trend_topics!inner(id, slug, status, category)"
+    )
+    .in("trend_topics.status", ["published", "rejected"])
+    .order("trend_topic_id", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    result.errors.push(`analyses load failed: ${error.message}`);
+    return result;
+  }
+
+  const updatedSlugs: string[] = [];
+
+  for (const row of rows ?? []) {
+    result.scanned++;
+    const topic = Array.isArray(row.trend_topics)
+      ? row.trend_topics[0]
+      : row.trend_topics;
+    if (!topic) {
+      result.skipped++;
+      continue;
+    }
+
+    // Skip if productGroups already populated
+    const existingSynthesis = row.synthesis_jsonb as
+      | { productGroups?: unknown[] }
+      | null;
+    if (
+      existingSynthesis &&
+      Array.isArray(existingSynthesis.productGroups) &&
+      existingSynthesis.productGroups.length > 0
+    ) {
+      result.skipped++;
+      continue;
+    }
+
+    const understanding = row.understanding_jsonb as TopicUnderstanding | null;
+    if (!understanding || !understanding.entities) {
+      result.errors.push(
+        `trend #${topic.id} (${topic.slug ?? "no-slug"}): missing understanding`
+      );
+      continue;
+    }
+
+    const sources = Array.isArray(row.sources_jsonb)
+      ? (row.sources_jsonb as import("@/lib/ai/types").SourceFragment[])
+      : [];
+    if (sources.length === 0) {
+      result.errors.push(
+        `trend #${topic.id} (${topic.slug ?? "no-slug"}): no sources, Gemini would refuse`
+      );
+      continue;
+    }
+
+    const productMatches = Array.isArray(row.product_matches_jsonb)
+      ? (row.product_matches_jsonb as ProductMatch[])
+      : [];
+    if (productMatches.length < 2) {
+      result.errors.push(
+        `trend #${topic.id} (${topic.slug ?? "no-slug"}): only ${productMatches.length} matched product(s) — need ≥2 to group. Run "Backfill all articles" first to get more matches.`
+      );
+      continue;
+    }
+
+    const marketReaction =
+      row.market_reaction_jsonb &&
+      typeof row.market_reaction_jsonb === "object"
+        ? (row.market_reaction_jsonb as MarketReaction)
+        : undefined;
+
+    try {
+      const synthRes = await synthesizeAnalysis({
+        understanding,
+        sources,
+        productMatches,
+        marketReaction,
+        categoryHint: topic.category as string,
+      });
+
+      if (synthRes.kind !== "analysis") {
+        result.errors.push(
+          `trend #${topic.id} (${topic.slug ?? "no-slug"}): Gemini refused (${synthRes.refusal.reason})`
+        );
+        continue;
+      }
+
+      // Double-check productGroups actually landed
+      const groups = synthRes.analysis.productGroups;
+      if (!groups || groups.length === 0) {
+        result.errors.push(
+          `trend #${topic.id} (${topic.slug ?? "no-slug"}): Gemini ran but returned empty productGroups — validator may have stripped invalid ids`
+        );
+        continue;
+      }
+
+      const { error: updErr } = await admin
+        .from("trend_analyses")
+        .update({ synthesis_jsonb: synthRes.analysis })
+        .eq("trend_topic_id", row.trend_topic_id);
+
+      if (updErr) {
+        result.errors.push(
+          `trend #${topic.id} (${topic.slug ?? "no-slug"}): update failed: ${updErr.message}`
+        );
+        continue;
+      }
+
+      result.updated++;
+      if (topic.slug) updatedSlugs.push(topic.slug as string);
+    } catch (err) {
+      result.errors.push(
+        `trend #${topic.id} (${topic.slug ?? "no-slug"}): ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  revalidatePath("/");
+  revalidatePath("/trending");
+  for (const slug of updatedSlugs) {
+    revalidatePath(`/trending/${slug}`);
+  }
   return result;
 }
 

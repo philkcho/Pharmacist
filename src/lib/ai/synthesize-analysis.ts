@@ -66,6 +66,52 @@ export type SynthesisResult =
 // Zod schema returned by Gemini
 // ============================================================
 
+const ProductGroupSchema = z.object({
+  role: z
+    .string()
+    .min(2)
+    .max(40)
+    .describe(
+      "Short role label (2-40 chars). Reflects the article's actual advice. Examples: 'Morning sunscreen', 'Evening treatment', 'Daily moisturizer', 'Take with breakfast', 'For headache'."
+    ),
+  description: z
+    .string()
+    .min(10)
+    .max(200)
+    .describe(
+      "One sentence (10-200 chars) explaining why the products in this group serve this role in the article's context."
+    ),
+  productIds: z
+    .array(z.number().int().positive())
+    .min(1)
+    .max(2)
+    .describe(
+      "1-2 medicationIds drawn from the ProductMatch list in the prompt. MUST be real ids from that list — no invention, no duplicates across groups."
+    ),
+});
+
+const EfficacyVerdictSchema = z.object({
+  medicationId: z
+    .number()
+    .int()
+    .positive()
+    .describe("Must be a medicationId from the ProductMatch list."),
+  bestFor: z
+    .string()
+    .min(10)
+    .max(200)
+    .describe(
+      "1 sentence — who or when this product is the right pick. Be specific: 'Sensitive skin starting a retinoid routine', NOT 'People who want good skin'."
+    ),
+  avoidIf: z
+    .string()
+    .min(10)
+    .max(200)
+    .describe(
+      "1 sentence — when another matched product would serve better. Point to a real trade-off (price, potency, texture, interaction) that the reader should consider."
+    ),
+});
+
 const ClaimSchema = z.object({
   text: z
     .string()
@@ -134,6 +180,28 @@ const SynthesisSchema = z.object({
       "'B12: The Vitamin 90% of Vegetarians Are Missing', " +
       "'5 SPF Myths That Could Be Damaging Your Skin', " +
       "'The One Ingredient Dermatologists Always Recommend'"
+    ),
+  productGroups: z
+    .array(ProductGroupSchema)
+    .max(4)
+    .optional()
+    .describe(
+      "Optional. Group the ProductMatch products into 2-4 role buckets (e.g. Morning/Evening/Moisturize, or Take-with-food/Before-bed). Total productIds across all groups ≤ 5, no duplicates. Each productId MUST be a medicationId from the ProductMatch list. OMIT (undefined) or return empty array when (a) there are <2 products, (b) the article is a narrow single-role listing, or (c) you can't confidently group them — the UI will fall back to a flat top-5 grid. Do NOT force groups just to fill the field."
+    ),
+  pharmacistNote: z
+    .string()
+    .min(10)
+    .max(400)
+    .optional()
+    .describe(
+      "Optional. 1-2 sentence pharmacist's take on what active ingredients are SHARED vs DISTINCT across the matched products, and what that means for the reader. Rendered as a callout below the ingredient grid. OMIT when <2 matched products or when the products don't share any meaningful ingredients."
+    ),
+  efficacyVerdicts: z
+    .array(EfficacyVerdictSchema)
+    .max(5)
+    .optional()
+    .describe(
+      "Optional. Per-product Best for / Avoid if verdicts. One entry per matched product (max 5). Each medicationId MUST be from the ProductMatch list. OMIT when <2 matched products."
     ),
 });
 
@@ -250,7 +318,59 @@ headline rules:
   - Do NOT just repeat the raw search keyword. Transform it into a magazine-style headline.
   - Use proven click-driving patterns: questions, surprising stats, myth-busting, "you might be wrong" hooks, numbered tips.
   - Good: "Your Moisturizer Might Be Missing This Key Ingredient"
-  - Bad: "Face Moisturizer" (this is just the keyword, not a headline)`;
+  - Bad: "Face Moisturizer" (this is just the keyword, not a headline)
+
+productGroups rules:
+  When you receive pharmacist-curated product matches in the prompt, group them into 2-4 practical role buckets RELEVANT TO THIS ARTICLE.
+
+  Each group contains:
+    - role: short label (2-40 chars) describing what the products in this bucket do in the article's recommendation
+    - description: 1 sentence (10-200 chars) explaining why these products serve this role
+    - productIds: 1-2 medicationIds from the ProductMatch list (NO invention, NO duplicates across groups)
+
+  Role labels must mirror the article's actual advice. Examples by category:
+    - Skincare routine articles → "Morning sunscreen", "Evening treatment", "Daily moisturizer", "Weekly exfoliation"
+    - Supplement stacking → "Take with breakfast", "Before bed", "On training days", "Empty stomach"
+    - OTC pain relief → "For headache", "For muscle soreness", "Anti-inflammatory"
+    - Cold & flu → "Daytime relief", "Nighttime / sleep", "Cough suppression"
+
+  Hard constraints:
+    - Total productIds across all groups ≤ 5
+    - No duplicate productIds across groups
+    - Every productId MUST be a medicationId from the provided ProductMatch list
+    - 1-2 productIds per group
+
+  Do NOT force groups:
+    - If there are <2 matched products, OMIT productGroups (leave undefined)
+    - If the article is a narrow single-role listing (all products serve the same role — e.g. "best fish oil brands"), OMIT productGroups and let the UI render a flat top-5
+    - If you can't confidently group, OMIT productGroups
+    - Never pad a group with unrelated products just to hit the minimum
+
+  If omitted, the UI falls back to a flat top-5 grid — perfectly fine for simple rankings.
+
+pharmacistNote rules:
+  Given the ProductMatch list + their ingredient highlights, write 1-2 sentences describing:
+    - What active ingredient(s) are SHARED by 2+ of the products (if any)
+    - What key active differs between products
+    - What that means practically for the reader's choice
+
+  Examples:
+    - "All three products contain niacinamide. The Paula's Choice formula adds retinol for anti-aging, while the Ordinary pair focuses on copper peptides and vitamin C for brightening."
+    - "Every OTC option here relies on acetaminophen or ibuprofen. The combination products add caffeine for migraine-specific boosts."
+
+  Evidence-grounded. No hype. OMIT when <2 products or no meaningful overlap.
+
+efficacyVerdicts rules:
+  Produce ONE verdict per matched product (max 5 total).
+  - medicationId: must be from the ProductMatch list
+  - bestFor: 1 sentence — WHO or WHEN this specific product is the right pick. Be concrete.
+      Good: "Sensitive skin starting a retinoid routine for the first time."
+      Bad: "People who want good skin."
+  - avoidIf: 1 sentence — pointing to a trade-off that makes another matched product better for that case.
+      Good: "You need faster results and can tolerate a stronger 1% retinol formulation."
+      Bad: "If you don't like it."
+
+  OMIT when <2 matched products.`;
 
 function buildPrompt(input: SynthesisInput): string {
   const { understanding, sources, productMatches, marketReaction } = input;
@@ -406,6 +526,23 @@ export async function synthesizeAnalysis(
 
   const confidence = capConfidence(rawAnalysis.confidence, sources);
 
+  // Validate productGroups: drop groups referencing medicationIds not
+  // in the input list, then dedupe productIds across groups so the UI
+  // never shows the same product twice.
+  const validProductGroups = validateProductGroups(
+    rawAnalysis.productGroups,
+    input.productMatches
+  );
+
+  // Validate efficacyVerdicts: drop any referencing medicationIds not
+  // in the input productMatches list.
+  const validIds = new Set(
+    (input.productMatches ?? []).map((m) => m.medicationId)
+  );
+  const validVerdicts = (rawAnalysis.efficacyVerdicts ?? []).filter(
+    (v) => validIds.has(v.medicationId)
+  );
+
   const analysis: Analysis = {
     answer: rawAnalysis.answer,
     claims: validClaims,
@@ -415,9 +552,62 @@ export async function synthesizeAnalysis(
     redFlags: rawAnalysis.redFlags,
     trendDrivers: filterFreshTrendDrivers(rawAnalysis.trendDrivers, sources),
     headline: rawAnalysis.headline,
+    ...(validProductGroups.length > 0
+      ? { productGroups: validProductGroups }
+      : {}),
+    ...(rawAnalysis.pharmacistNote
+      ? { pharmacistNote: rawAnalysis.pharmacistNote }
+      : {}),
+    ...(validVerdicts.length > 0
+      ? { efficacyVerdicts: validVerdicts }
+      : {}),
   };
 
   return { kind: "analysis", analysis };
+}
+
+/**
+ * Keep only groups whose productIds are present in the input
+ * ProductMatch list, and drop duplicate productIds across groups
+ * (first occurrence wins). Empty groups are discarded.
+ */
+function validateProductGroups(
+  raw: z.infer<typeof SynthesisSchema>["productGroups"],
+  input: ProductMatch[] | undefined
+): Analysis["productGroups"] extends (infer T)[] | undefined ? T[] : never {
+  if (!raw || raw.length === 0) return [];
+  const validIds = new Set((input ?? []).map((m) => m.medicationId));
+  if (validIds.size === 0) return [];
+
+  const seen = new Set<number>();
+  const out: { role: string; description: string; productIds: number[] }[] = [];
+  for (const g of raw) {
+    const filteredIds: number[] = [];
+    for (const id of g.productIds) {
+      if (!validIds.has(id)) continue;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      filteredIds.push(id);
+      if (filteredIds.length >= 2) break;
+    }
+    if (filteredIds.length === 0) continue;
+    out.push({
+      role: g.role,
+      description: g.description,
+      productIds: filteredIds,
+    });
+  }
+  // Cap total productIds at 5 as final safeguard
+  let total = 0;
+  const capped: typeof out = [];
+  for (const g of out) {
+    if (total >= 5) break;
+    const room = 5 - total;
+    const ids = g.productIds.slice(0, room);
+    capped.push({ ...g, productIds: ids });
+    total += ids.length;
+  }
+  return capped;
 }
 
 // ============================================================

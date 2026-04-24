@@ -12,6 +12,8 @@ import {
   ShoppingCart,
   Scale,
   Pill,
+  Target,
+  TriangleAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { ProductImage } from "@/components/ui/product-image";
@@ -264,7 +266,7 @@ export default async function TrendPage({ params }: TrendPageProps) {
         </section>
       )}
 
-      {/* ===== Section 4 — Recommended Products (top 5) ===== */}
+      {/* ===== Section 4 — Recommended Products ===== */}
       {hasProducts && (
         <section className="mt-10">
           <div className="mb-3 h-0.5 w-10 bg-primary" />
@@ -273,36 +275,86 @@ export default async function TrendPage({ params }: TrendPageProps) {
             Recommended Products
           </h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            Top pharmacist-reviewed picks mentioned in this article.
+            {synthesis?.productGroups && synthesis.productGroups.length > 0
+              ? "Top pharmacist-reviewed picks for each step."
+              : "Top pharmacist-reviewed picks mentioned in this article."}
           </p>
 
-          <div
-            className={`mt-5 grid gap-3 ${
-              matchedMedications.length <= 2
-                ? "grid-cols-2"
-                : matchedMedications.length === 3
-                  ? "grid-cols-2 sm:grid-cols-3"
-                  : matchedMedications.length === 4
-                    ? "grid-cols-2 sm:grid-cols-4"
-                    : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
-            }`}
-          >
-            {matchedMedications.slice(0, 5).map((med, i) => {
-              // Pick the highest-priority active link for this product
-              const primary = purchaseLinks.find(
-                (l) => l.medicationId === med.id
-              );
-              return (
-                <RecommendedProductCard
-                  key={med.id}
-                  rank={i + 1}
-                  medication={med}
-                  trendId={topic.id}
-                  primaryLink={primary ?? null}
-                />
-              );
-            })}
-          </div>
+          {/* Role-grouped view (preferred) or flat top-5 fallback */}
+          {synthesis?.productGroups && synthesis.productGroups.length > 0 ? (
+            <div className="mt-6 space-y-6">
+              {synthesis.productGroups.map((group, gi) => {
+                const groupMeds = group.productIds
+                  .map((id) => matchedMedications.find((m) => m.id === id))
+                  .filter(
+                    (m): m is (typeof matchedMedications)[number] =>
+                      m !== undefined
+                  );
+                if (groupMeds.length === 0) return null;
+                return (
+                  <div key={gi} className="space-y-3">
+                    <div>
+                      <h3 className="text-base font-semibold">
+                        {group.role}
+                      </h3>
+                      <p className="mt-0.5 text-sm text-muted-foreground">
+                        {group.description}
+                      </p>
+                    </div>
+                    <div
+                      className={`grid gap-3 ${
+                        groupMeds.length === 1
+                          ? "sm:grid-cols-2"
+                          : "grid-cols-2"
+                      }`}
+                    >
+                      {groupMeds.map((med, mi) => {
+                        const primary = purchaseLinks.find(
+                          (l) => l.medicationId === med.id
+                        );
+                        return (
+                          <RecommendedProductCard
+                            key={med.id}
+                            rank={mi + 1}
+                            medication={med}
+                            trendId={topic.id}
+                            primaryLink={primary ?? null}
+                          />
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div
+              className={`mt-5 grid gap-3 ${
+                matchedMedications.length <= 2
+                  ? "grid-cols-2"
+                  : matchedMedications.length === 3
+                    ? "grid-cols-2 sm:grid-cols-3"
+                    : matchedMedications.length === 4
+                      ? "grid-cols-2 sm:grid-cols-4"
+                      : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5"
+              }`}
+            >
+              {matchedMedications.slice(0, 5).map((med, i) => {
+                const primary = purchaseLinks.find(
+                  (l) => l.medicationId === med.id
+                );
+                return (
+                  <RecommendedProductCard
+                    key={med.id}
+                    rank={i + 1}
+                    medication={med}
+                    trendId={topic.id}
+                    primaryLink={primary ?? null}
+                  />
+                );
+              })}
+            </div>
+          )}
 
           {matchedMedications.length < 3 && (
             <div className="mt-4 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
@@ -311,19 +363,26 @@ export default async function TrendPage({ params }: TrendPageProps) {
               options may be added after pharmacist review.
             </div>
           )}
-
-          <p className="mt-4 text-xs text-muted-foreground">
-            AI PharmCare may earn a commission from purchases made through
-            these links. Always consult your pharmacist or healthcare provider
-            before use.
-          </p>
         </section>
       )}
 
-      {/* ===== Section 5 — Ingredient Deep Dive (first product) ===== */}
-      {hasProducts && matchedMedications[0]?.ingredientAnalysis != null && (
-        <IngredientSection analysis={matchedMedications[0].ingredientAnalysis} />
+      {/* ===== Section 5 — Ingredient Comparison across products ===== */}
+      {hasProducts && (
+        <ProductsIngredientsComparison
+          products={matchedMedications.slice(0, 5)}
+          pharmacistNote={synthesis?.pharmacistNote ?? null}
+        />
       )}
+
+      {/* ===== Section 5b — Best For / Avoid If (per matched product) ===== */}
+      {hasProducts &&
+        synthesis?.efficacyVerdicts &&
+        synthesis.efficacyVerdicts.length > 0 && (
+          <BestForAvoidIfSection
+            products={matchedMedications.slice(0, 5)}
+            verdicts={synthesis.efficacyVerdicts}
+          />
+        )}
 
       {/* ===== Section 6 — Safety & Real-World Data ===== */}
       <SafetySection
@@ -735,6 +794,203 @@ interface IngredientItem {
     whenToAvoid?: Array<{ text: string } | string>;
     maxPerDay?: { text: string } | string;
   };
+}
+
+/**
+ * Per-product ingredients grid for the trend article. Mirrors the
+ * "Ingredients" subsection of Expert Picks' <ProductsAtAGlance> —
+ * each matched product gets its own column of top actives, with a
+ * "Shared / Only in X" chip row beneath that computes overlap across
+ * products purely from the ingredient_analysis JSONB (no AI call).
+ */
+function ProductsIngredientsComparison({
+  products,
+  pharmacistNote,
+}: {
+  products: TrendPageData["matchedMedications"];
+  pharmacistNote?: string | null;
+}) {
+  if (products.length === 0) return null;
+
+  // Normalize: for each product extract up to 3 ingredient objects
+  const perProduct = products.slice(0, 5).map((p) => {
+    const list = Array.isArray(p.ingredientAnalysis)
+      ? (p.ingredientAnalysis as IngredientItem[])
+      : [];
+    const ings: Array<{ name: string; amount?: string }> = [];
+    for (const i of list) {
+      const name = typeof i.name === "string" ? i.name : null;
+      if (!name) continue;
+      const amount = typeof i.amount === "string" ? i.amount : undefined;
+      ings.push(amount ? { name, amount } : { name });
+      if (ings.length >= 3) break;
+    }
+    return { product: p, ingredients: ings };
+  });
+
+  if (perProduct.every((x) => x.ingredients.length === 0)) return null;
+
+  // Shared ingredients = name appears in 2+ products (case-insensitive)
+  const counts = new Map<string, { display: string; count: number }>();
+  for (const { ingredients } of perProduct) {
+    const seen = new Set<string>();
+    for (const ing of ingredients) {
+      const key = ing.name.toLowerCase().trim();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const entry = counts.get(key);
+      if (entry) {
+        entry.count += 1;
+      } else {
+        counts.set(key, { display: ing.name, count: 1 });
+      }
+    }
+  }
+  const shared = Array.from(counts.values())
+    .filter((v) => v.count >= 2)
+    .map((v) => v.display)
+    .slice(0, 6);
+
+  const cols =
+    perProduct.length <= 2
+      ? "grid-cols-2"
+      : perProduct.length === 3
+        ? "grid-cols-2 sm:grid-cols-3"
+        : perProduct.length === 4
+          ? "grid-cols-2 sm:grid-cols-4"
+          : "grid-cols-2 sm:grid-cols-3 lg:grid-cols-5";
+
+  return (
+    <section className="mt-10">
+      <div className="mb-3 flex items-center gap-2">
+        <FlaskConical className="h-4 w-4 text-primary" />
+        <h2 className="text-lg font-semibold">Ingredients at a Glance</h2>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Top actives per product + what overlaps
+      </p>
+
+      <div className={`grid gap-3 ${cols}`}>
+        {perProduct.map(({ product, ingredients }) => (
+          <div key={product.id} className="rounded-lg border bg-card p-3">
+            <p className="mb-2 line-clamp-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              {product.name}
+            </p>
+            {ingredients.length > 0 ? (
+              <ul className="space-y-1.5">
+                {ingredients.map((ing, i) => (
+                  <li key={i} className="text-sm leading-snug">
+                    <span className="font-medium">{ing.name}</span>
+                    {ing.amount && (
+                      <span className="block text-xs text-muted-foreground">
+                        {ing.amount}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Ingredient data pending.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {(pharmacistNote || shared.length > 0) && (
+        <div className="mt-4 rounded-lg border-l-4 border-primary bg-muted/30 p-4">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-primary">
+            Pharmacist&apos;s take
+          </p>
+          {pharmacistNote && (
+            <p className="text-sm leading-relaxed">{pharmacistNote}</p>
+          )}
+          {shared.length > 0 && (
+            <div
+              className={`flex flex-wrap items-center gap-1.5 ${
+                pharmacistNote ? "mt-3" : ""
+              }`}
+            >
+              <span className="text-xs font-medium text-muted-foreground">
+                Shared:
+              </span>
+              {shared.map((name) => (
+                <span
+                  key={name}
+                  className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
+                >
+                  {name}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  );
+}
+
+/**
+ * Expert-Picks-style "Best For / Avoid If" section — per matched product
+ * cards with two bullets: ✅ Best for (specific scenario) and ⚠ Avoid if
+ * (trade-off pointing to another product). Data comes from
+ * synthesis.efficacyVerdicts produced by Gemini.
+ */
+function BestForAvoidIfSection({
+  products,
+  verdicts,
+}: {
+  products: TrendPageData["matchedMedications"];
+  verdicts: NonNullable<Analysis["efficacyVerdicts"]>;
+}) {
+  const byId = new Map(products.map((p) => [p.id, p]));
+  const rows = verdicts
+    .map((v) => ({ verdict: v, product: byId.get(v.medicationId) }))
+    .filter(
+      (x): x is { verdict: typeof x.verdict; product: NonNullable<typeof x.product> } =>
+        !!x.product
+    );
+  if (rows.length === 0) return null;
+
+  return (
+    <section className="mt-10">
+      <div className="mb-3 flex items-center gap-2">
+        <Target className="h-4 w-4 text-primary" />
+        <h2 className="text-lg font-semibold">Best For / Avoid If</h2>
+      </div>
+      <p className="mb-4 text-xs text-muted-foreground">
+        When each product shines — and when another wins
+      </p>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {rows.map(({ verdict, product }) => (
+          <div key={product.id} className="rounded-lg border bg-card p-4">
+            <p className="mb-3 font-semibold leading-snug">{product.name}</p>
+            <div className="space-y-2.5">
+              <div className="flex items-start gap-2">
+                <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
+                <div className="text-sm leading-snug">
+                  <span className="font-medium text-emerald-700 dark:text-emerald-400">
+                    Best for:
+                  </span>{" "}
+                  {verdict.bestFor}
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
+                <div className="text-sm leading-snug">
+                  <span className="font-medium text-amber-700 dark:text-amber-400">
+                    Avoid if:
+                  </span>{" "}
+                  {verdict.avoidIf}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
 }
 
 function IngredientSection({ analysis }: { analysis: unknown }) {

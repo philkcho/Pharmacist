@@ -117,6 +117,36 @@ export interface Claim {
   isInference: boolean;
 }
 
+/**
+ * AI-generated product role bucket. Each bucket has a short role label
+ * (e.g. "Morning sunscreen", "Evening treatment", "Before bed"), a
+ * 1-sentence description of why the grouped products serve that role in
+ * the article's context, and 1-2 `productIds` (medicationId) from the
+ * accompanying ProductMatch array.
+ *
+ * When `productGroups` is absent or empty, the UI falls back to a flat
+ * top-5 card grid (backward compatible with older analyses).
+ */
+export interface ProductGroup {
+  role: string;
+  description: string;
+  productIds: number[];
+}
+
+/**
+ * AI-generated efficacy verdict for a single matched product in the
+ * trend article context. Used to render "Best for / Avoid if" cards
+ * similar to the Expert Picks ProductsAtAGlance layout.
+ */
+export interface EfficacyVerdict {
+  /** Must match a ProductMatch.medicationId in the same analysis. */
+  medicationId: number;
+  /** 1 sentence — who/when this product shines. */
+  bestFor: string;
+  /** 1 sentence — when another matched product would serve better. */
+  avoidIf: string;
+}
+
 export interface Analysis {
   /** Full plain-English answer with inline [1][2] citation markers. */
   answer: string;
@@ -155,6 +185,27 @@ export interface Analysis {
    * "B12: The Vitamin 90% of Vegetarians Are Missing"
    */
   headline: string;
+  /**
+   * Optional. 2–4 role-based buckets grouping the matched products
+   * (Morning / Evening / Moisturize / Take-with-food etc.). Total
+   * productIds across all groups ≤ 5, no duplicates, all ids drawn
+   * from the accompanying ProductMatch list. Empty / undefined →
+   * UI renders a flat top-5 instead.
+   */
+  productGroups?: ProductGroup[];
+  /**
+   * Optional. 1–2 sentence pharmacist's take on what active ingredients
+   * are SHARED vs DISTINCT across the matched products, and what that
+   * means for the reader. Rendered as a callout below the ingredient
+   * grid. Empty/undefined → the UI hides the callout.
+   */
+  pharmacistNote?: string;
+  /**
+   * Optional. Per-product "Best for / Avoid if" verdicts. One entry
+   * per matched product. Used to render the Expert-Picks-style
+   * efficacy comparison section. Empty/undefined → UI hides.
+   */
+  efficacyVerdicts?: EfficacyVerdict[];
 }
 
 // ============================================================
