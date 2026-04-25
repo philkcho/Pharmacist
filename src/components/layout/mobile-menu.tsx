@@ -62,16 +62,22 @@ export function MobileMenu({ showAdmin, userEmail }: MobileMenuProps) {
         className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
       />
 
-      {/* Drawer panel — full viewport height via dvh; min-h-0 on the nav
-          inside lets the menu scroll on short viewports. */}
+      {/* Drawer panel — span full viewport with inset-y-0 (most compatible)
+          plus an explicit inline height fallback for browsers that don't
+          honor dvh. shrink-0 on header/banner/footer keeps the nav from
+          collapsing to 0 height. */}
       <div
-        className="fixed right-0 top-0 z-[70] flex h-dvh w-[300px] max-w-[85vw] flex-col bg-background shadow-2xl"
-        style={{ paddingTop: "env(safe-area-inset-top)" }}
+        className="fixed inset-y-0 right-0 z-[70] flex w-[300px] max-w-[85vw] flex-col bg-background shadow-2xl"
+        style={{
+          paddingTop: "env(safe-area-inset-top)",
+          height: "100dvh",
+          maxHeight: "100vh",
+        }}
         role="dialog"
         aria-modal="true"
         aria-label="Site menu"
       >
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between border-b px-4 py-3">
           <span className="text-sm font-semibold">Menu</span>
           <button
             onClick={close}
@@ -83,7 +89,7 @@ export function MobileMenu({ showAdmin, userEmail }: MobileMenuProps) {
         </div>
 
         {userEmail && (
-          <div className="border-b px-4 py-3 text-xs">
+          <div className="shrink-0 border-b px-4 py-3 text-xs">
             <p className="text-muted-foreground">Signed in as</p>
             <p className="mt-0.5 truncate font-medium" title={userEmail}>
               {userEmail}
@@ -162,7 +168,7 @@ export function MobileMenu({ showAdmin, userEmail }: MobileMenuProps) {
         </nav>
 
         <div
-          className="border-t px-4 py-3 text-[11px] text-muted-foreground"
+          className="shrink-0 border-t px-4 py-3 text-[11px] text-muted-foreground"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           Pharmacist-reviewed health & beauty analysis.
