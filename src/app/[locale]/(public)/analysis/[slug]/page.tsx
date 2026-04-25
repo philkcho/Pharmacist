@@ -15,9 +15,16 @@ import {
   Clock,
   Users,
   Ban,
+  Info,
+  Package,
+  Lightbulb,
 } from "lucide-react";
 import Link from "next/link";
-import { getProductAnalysis, type IngredientDetail } from "@/lib/actions/analysis";
+import {
+  getProductAnalysis,
+  type IngredientDetail,
+  type UsageGuide,
+} from "@/lib/actions/analysis";
 import { StickyBuyBar } from "./sticky-buy-bar";
 import type { Metadata } from "next";
 import { ProductReviewJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
@@ -181,11 +188,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
               <Beaker className="h-5 w-5 text-primary" />
               Ingredient Analysis
             </h2>
-            <div className="mt-4 space-y-4">
-              {data.ingredients.map((ing, i) => (
-                <IngredientCard key={i} ingredient={ing} />
-              ))}
-            </div>
+            <IngredientsTable ingredients={data.ingredients} />
           </section>
         )}
 
@@ -235,6 +238,14 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
               )}
             </div>
           </section>
+        )}
+
+        {/* ===== Usage Guide & Precautions ===== */}
+        {data.usageGuide && (
+          <UsageGuideSection
+            guide={data.usageGuide}
+            productType={data.productType}
+          />
         )}
 
         {/* ===== Safety & Warnings ===== */}
@@ -320,10 +331,199 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
 }
 
 // ============================================================
-// Ingredient Card
+// Usage Guide & Precautions
 // ============================================================
 
-function IngredientCard({ ingredient }: { ingredient: IngredientDetail }) {
+function howToUseLabel(productType: string): string {
+  switch (productType) {
+    case "supplement":
+    case "otc_drug":
+      return "How to Take";
+    case "cosmetic":
+      return "How to Apply";
+    case "quasi_drug":
+    default:
+      return "How to Use";
+  }
+}
+
+function UsageGuideSection({
+  guide,
+  productType,
+}: {
+  guide: UsageGuide;
+  productType: string;
+}) {
+  return (
+    <section className="mt-8">
+      <h2 className="flex items-center gap-2 text-xl font-semibold">
+        <Info className="h-5 w-5 text-primary" />
+        Usage Guide &amp; Precautions
+      </h2>
+
+      <ul className="mt-4 space-y-4">
+        {guide.howToUse && (
+          <li className="flex gap-3 rounded-lg border p-4">
+            <Clock className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <h3 className="text-sm font-semibold">
+                {howToUseLabel(productType)}
+              </h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {guide.howToUse}
+              </p>
+            </div>
+          </li>
+        )}
+
+        {guide.storage && (
+          <li className="flex gap-3 rounded-lg border p-4">
+            <Package className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <h3 className="text-sm font-semibold">Storage</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {guide.storage}
+              </p>
+            </div>
+          </li>
+        )}
+
+        {guide.precautions && (
+          <li className="flex gap-3 rounded-lg border border-amber-200 bg-amber-50/40 p-4 dark:border-amber-900 dark:bg-amber-950/30">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <div>
+              <h3 className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+                Precautions
+              </h3>
+              <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+                {guide.precautions}
+              </p>
+            </div>
+          </li>
+        )}
+      </ul>
+
+      {guide.tip && (
+        <div className="mt-4 flex gap-3 rounded-lg border-l-4 border-primary bg-primary/5 p-4">
+          <Lightbulb className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">
+              Pharmacist&apos;s Tip
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{guide.tip}</p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
+// ============================================================
+// Ingredients Table (scannable 2-column layout)
+// ============================================================
+
+function IngredientsTable({ ingredients }: { ingredients: IngredientDetail[] }) {
+  const hasAnyDetails = ingredients.some(
+    (ing) =>
+      ing.howFast ||
+      ing.whoItsFor ||
+      ing.maxPerDay ||
+      (ing.whenToAvoid && ing.whenToAvoid.length > 0) ||
+      ing.mechanism ||
+      ing.clinicalNotes
+  );
+
+  return (
+    <>
+      {/* Desktop: table layout */}
+      <div className="mt-4 hidden overflow-hidden rounded-lg border sm:block">
+        <table className="w-full text-sm">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="w-[40%] px-4 py-3 text-left font-medium">
+                Ingredient
+              </th>
+              <th className="px-4 py-3 text-left font-medium">
+                Role &amp; Characteristics
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y">
+            {ingredients.map((ing, i) => (
+              <tr key={i} className="align-top">
+                <td className="px-4 py-3">
+                  <div className="font-semibold">{ing.name}</div>
+                  {ing.amount && (
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {ing.amount}
+                    </div>
+                  )}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                  {ing.whatItDoes || (
+                    <span className="italic opacity-60">
+                      Details pending pharmacist review.
+                    </span>
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Mobile: stacked cards */}
+      <div className="mt-4 space-y-3 sm:hidden">
+        {ingredients.map((ing, i) => (
+          <div key={i} className="rounded-lg border p-4">
+            <div className="flex items-baseline justify-between gap-2">
+              <div className="font-semibold">{ing.name}</div>
+              {ing.amount && (
+                <div className="text-xs text-muted-foreground">
+                  {ing.amount}
+                </div>
+              )}
+            </div>
+            {ing.whatItDoes ? (
+              <p className="mt-2 text-sm text-muted-foreground">
+                {ing.whatItDoes}
+              </p>
+            ) : (
+              <p className="mt-2 text-xs italic text-muted-foreground/70">
+                Details pending pharmacist review.
+              </p>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Expandable detailed profiles */}
+      {hasAnyDetails && (
+        <details className="group mt-4">
+          <summary className="inline-flex cursor-pointer items-center gap-1 text-sm font-medium text-primary hover:underline">
+            View detailed ingredient profiles
+            <span className="transition-transform group-open:rotate-90">→</span>
+          </summary>
+          <div className="mt-4 space-y-4">
+            {ingredients.map((ing, i) => (
+              <IngredientDetailCard key={i} ingredient={ing} />
+            ))}
+          </div>
+        </details>
+      )}
+    </>
+  );
+}
+
+// ============================================================
+// Ingredient Detail Card (shown inside expandable panel)
+// ============================================================
+
+function IngredientDetailCard({
+  ingredient,
+}: {
+  ingredient: IngredientDetail;
+}) {
   return (
     <div className="rounded-lg border p-4">
       <div className="flex items-center gap-2">
@@ -386,7 +586,7 @@ function IngredientCard({ ingredient }: { ingredient: IngredientDetail }) {
         </div>
       )}
 
-      {ingredient.mechanism && (
+      {(ingredient.mechanism || ingredient.clinicalNotes) && (
         <details className="mt-3">
           <summary className="cursor-pointer text-xs font-medium text-muted-foreground hover:text-foreground">
             Professional Details

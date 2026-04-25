@@ -43,6 +43,33 @@ const productAnalysisSchema = z.object({
     .min(2)
     .max(5)
     .describe("Who should consider using this product"),
+  usageGuide: z
+    .object({
+      howToUse: z
+        .string()
+        .describe(
+          "1-2 sentences on WHEN and HOW to take/apply/use for best results. Be specific (timing with food, dosing, order of application, AM/PM), not generic."
+        ),
+      storage: z
+        .string()
+        .describe(
+          "1-2 sentences on storage (light, heat, moisture, refrigeration). Include refrigeration only when it genuinely matters (e.g. probiotics, fish oil)."
+        ),
+      precautions: z
+        .string()
+        .describe(
+          "1-3 sentences on real-world cautions: drug interactions (name concrete drugs), surgery timing, pregnancy/breastfeeding if relevant, populations to avoid. Do not repeat content from the main Safety section verbatim."
+        ),
+      tip: z
+        .string()
+        .optional()
+        .describe(
+          "Optional 1-2 sentence pharmacist tip highlighting the best-fit user profile. Omit if nothing distinctive to add."
+        ),
+    })
+    .describe(
+      "Practical 'Usage Guide & Precautions' section shown below pros/cons on the analysis page."
+    ),
 });
 
 export type ProductAnalysisResult = z.infer<typeof productAnalysisSchema>;

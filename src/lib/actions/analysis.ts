@@ -15,6 +15,13 @@ export interface IngredientDetail {
   clinicalNotes?: string;
 }
 
+export interface UsageGuide {
+  howToUse: string;
+  storage: string;
+  precautions: string;
+  tip?: string;
+}
+
 export interface PurchaseOption {
   linkId: number;
   retailerName: string;
@@ -37,6 +44,7 @@ export interface AnalysisPageData {
   pros: string[];
   cons: string[];
   ingredients: IngredientDetail[];
+  usageGuide: UsageGuide | null;
   warnings: string | null;
   sideEffects: string | null;
   purchaseOptions: PurchaseOption[];
@@ -64,6 +72,23 @@ function parseProsCons(arr: unknown): string[] {
   return arr
     .map((item) => (typeof item === "string" ? item : parseText(item)))
     .filter((s) => s.length > 0);
+}
+
+function parseUsageGuide(raw: unknown): UsageGuide | null {
+  if (!raw || typeof raw !== "object") return null;
+  const obj = raw as Record<string, unknown>;
+  const howToUse = parseText(obj.howToUse);
+  const storage = parseText(obj.storage);
+  const precautions = parseText(obj.precautions);
+  const tip = parseText(obj.tip);
+  // Require at least the three core fields; tip is optional.
+  if (!howToUse && !storage && !precautions) return null;
+  return {
+    howToUse,
+    storage,
+    precautions,
+    ...(tip ? { tip } : {}),
+  };
 }
 
 function parseIngredients(analysis: unknown): IngredientDetail[] {
@@ -99,7 +124,7 @@ export async function getProductAnalysis(
   const { data: med } = await supabase
     .from("medications")
     .select(
-      "id, name, slug, generic_name, brand_names, description, image_url, product_type, price_range, verdict, pros, cons, ingredient_analysis, warnings, side_effects, references_jsonb"
+      "id, name, slug, generic_name, brand_names, description, image_url, product_type, price_range, verdict, pros, cons, ingredient_analysis, usage_guide_jsonb, warnings, side_effects, references_jsonb"
     )
     .or(`slug.eq.${slug},name.ilike.%${decoded}%`)
     .limit(1)
@@ -147,6 +172,7 @@ export async function getProductAnalysis(
       pros: parseProsCons(med.pros),
       cons: parseProsCons(med.cons),
       ingredients: parseIngredients(med.ingredient_analysis),
+      usageGuide: parseUsageGuide(med.usage_guide_jsonb),
       warnings: (med.warnings as string) ?? null,
       sideEffects: (med.side_effects as string) ?? null,
       purchaseOptions,
@@ -171,6 +197,7 @@ export async function getProductAnalysis(
     pros: [],
     cons: [],
     ingredients: [],
+    usageGuide: null,
     warnings: null,
     sideEffects: null,
     purchaseOptions: [],

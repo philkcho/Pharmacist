@@ -66,6 +66,33 @@ const ProductAnalysisSchema = z.object({
     .describe(
       "A 2-3 sentence consumer-friendly product description. What it is, what it does, when to use it."
     ),
+  usageGuide: z
+    .object({
+      howToUse: z
+        .string()
+        .describe(
+          "1-2 sentences on WHEN and HOW to take/apply/use this product for best results. For supplements and OTC drugs, cover timing with food, dosing frequency, and absorption notes. For cosmetics, cover order of application, AM/PM, layering. Be specific, not generic. Do NOT start with 'Take' — start with the recommendation directly (e.g. 'Best taken with meals because...')."
+        ),
+      storage: z
+        .string()
+        .describe(
+          "1-2 sentences on storage (light, heat, moisture, refrigeration). Only include refrigeration advice if it genuinely applies (e.g. probiotics, fish oil in hot climates)."
+        ),
+      precautions: z
+        .string()
+        .describe(
+          "1-3 sentences on the most important real-world cautions: drug interactions, surgery timing, pregnancy/breastfeeding if relevant, specific populations to avoid. Name concrete interacting drugs when applicable (e.g. 'blood thinners like aspirin or warfarin'). Do not repeat information already in the main Safety section verbatim."
+        ),
+      tip: z
+        .string()
+        .optional()
+        .describe(
+          "Optional 1-2 sentence pharmacist tip highlighting the best-fit user profile for this product (e.g. 'This is particularly well-suited for people concerned with cardiovascular health who also experience dry eyes or mild memory concerns.'). Omit if nothing distinctive to say."
+        ),
+    })
+    .describe(
+      "Practical 'Usage Guide & Precautions' section rendered below pros/cons. Focus on real-world actionability: when to take, how to store, who to watch out for."
+    ),
 });
 
 export type ProductAnalysis = z.infer<typeof ProductAnalysisSchema>;

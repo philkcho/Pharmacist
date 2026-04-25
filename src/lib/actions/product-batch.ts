@@ -233,6 +233,7 @@ export async function processProductBatch(
             pros: analysis.pros.map((text) => ({ text, sourceIds: [] })),
             cons: analysis.cons.map((text) => ({ text, sourceIds: [] })),
             ingredient_analysis: ingredientAnalysis,
+            usage_guide_jsonb: analysis.usageGuide,
             comparison_score: analysis.comparisonScore,
             scoring_rationale: analysis.scoringRationale,
             recommended_for: analysis.recommendedFor,

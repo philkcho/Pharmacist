@@ -195,6 +195,9 @@ export const medications = pgTable(
       .array()
       .default(sql`'{}'::bigint[]`),
     ingredientAnalysis: jsonb("ingredient_analysis").default([]),
+    // Usage Guide & Precautions (migration 025) — rendered below pros/cons.
+    // Shape: { howToUse, storage, precautions, tip? }. NULL hides section.
+    usageGuide: jsonb("usage_guide_jsonb"),
     comparisonScore: integer("comparison_score"),
     scoringRationale: text("scoring_rationale"),
     isFeatured: boolean("is_featured").notNull().default(false),

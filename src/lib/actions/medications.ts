@@ -795,6 +795,7 @@ export async function importSampleProducts(): Promise<{
           pros: analysis.pros,
           cons: analysis.cons,
           ingredient_analysis: analysis.ingredientAnalysis,
+          usage_guide_jsonb: analysis.usageGuide,
           recommended_for: analysis.recommendedFor,
         })
         .select("id")
