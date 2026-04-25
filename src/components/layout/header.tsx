@@ -28,11 +28,11 @@ export function Header({ showAdmin, userEmail }: HeaderProps) {
           <HeaderSearchBar />
         </div>
 
-        <nav className="flex shrink-0 items-center gap-4 text-sm font-medium">
+        <nav className="flex min-w-0 shrink items-center gap-3 text-sm font-medium sm:shrink-0 sm:gap-4">
           {showAdmin && (
             <Link
               href="/dashboard"
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
             >
               Admin
             </Link>
@@ -46,20 +46,20 @@ export function Header({ showAdmin, userEmail }: HeaderProps) {
           {userEmail && (
             <Link
               href="/consult"
-              className="text-muted-foreground transition-colors hover:text-foreground"
+              className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
             >
               My questions
             </Link>
           )}
           <Link
             href="/about"
-            className="text-muted-foreground transition-colors hover:text-foreground"
+            className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
           >
             {t("nav.about")}
           </Link>
 
           {userEmail ? (
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2">
               <span
                 className="hidden max-w-[140px] truncate text-xs text-muted-foreground md:inline"
                 title={userEmail}
@@ -69,7 +69,7 @@ export function Header({ showAdmin, userEmail }: HeaderProps) {
               <form action={signOut}>
                 <button
                   type="submit"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
+                  className="whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground"
                 >
                   Sign out
                 </button>
@@ -78,7 +78,7 @@ export function Header({ showAdmin, userEmail }: HeaderProps) {
           ) : (
             <Button
               size="sm"
-              className="gap-1.5"
+              className="shrink-0 gap-1.5"
               render={<Link href="/login" />}
             >
               <LogIn className="h-3.5 w-3.5" />
