@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { X, Mail, Check, Loader2, Bell } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, Mail, Check, Loader2, Bell, CalendarDays } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SignInPrompt } from "./sign-in-prompt";
+import { useCurrentUserEmail } from "./use-current-user-email";
 
 interface SubscribeSheetProps {
   open: boolean;
@@ -21,16 +23,24 @@ export function SubscribeSheet({
   open,
   onClose,
 }: SubscribeSheetProps) {
+  const { email: authEmail, loading: authLoading } = useCurrentUserEmail();
   const [email, setEmail] = useState("");
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (authEmail) setEmail(authEmail);
+  }, [authEmail]);
 
   if (!open) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim() || !email.includes("@")) {
+    const value = (authEmail ?? email).trim().toLowerCase();
+    if (!value || !value.includes("@")) {
       setError("Please enter a valid email.");
       return;
     }
@@ -40,14 +50,15 @@ export function SubscribeSheet({
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: value }),
       });
+      const data = await res.json().catch(() => ({}));
       if (!res.ok && res.status !== 404) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error ?? "Subscription failed");
+        throw new Error(data?.error ?? "Subscription failed");
       }
       // 404 is expected during Phase 1 (endpoint not yet built).
       // We still mark as done to test the UX flow end-to-end.
+      setLoggedIn(Boolean(data?.loggedIn));
       setDone(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
@@ -92,22 +103,43 @@ export function SubscribeSheet({
               </p>
 
               <form onSubmit={handleSubmit} className="space-y-3">
-                <label className="block">
-                  <span className="text-sm font-medium">Email</span>
-                  <div className="mt-1 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-primary/30">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <input
-                      type="email"
-                      required
-                      autoFocus
-                      placeholder="you@example.com"
-                      className="flex-1 bg-transparent text-sm outline-none"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      disabled={busy}
-                    />
+                {authLoading ? (
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Checking your account…
                   </div>
-                </label>
+                ) : authEmail ? (
+                  <div className="flex items-center gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span className="flex-1 truncate">
+                      Subscribing as <strong>{authEmail}</strong>
+                    </span>
+                  </div>
+                ) : (
+                  <label className="block">
+                    <span className="text-sm font-medium">Email</span>
+                    <div className="mt-1 flex items-center gap-2 rounded-lg border bg-background px-3 py-2 focus-within:ring-2 focus-within:ring-primary/30">
+                      <Mail className="h-4 w-4 text-muted-foreground" />
+                      <input
+                        type="email"
+                        required
+                        autoFocus
+                        placeholder="you@example.com"
+                        className="flex-1 bg-transparent text-sm outline-none"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={busy}
+                      />
+                    </div>
+                  </label>
+                )}
+
+                <div className="flex items-center gap-2 rounded-lg bg-primary/5 px-3 py-2 text-xs">
+                  <CalendarDays className="h-4 w-4 shrink-0 text-primary" />
+                  <span>
+                    <strong>Weekly</strong> · sent every Monday
+                  </span>
+                </div>
 
                 {error && (
                   <p className="text-xs text-rose-600">{error}</p>
@@ -116,7 +148,7 @@ export function SubscribeSheet({
                 <Button
                   type="submit"
                   className="w-full"
-                  disabled={busy || !email.trim()}
+                  disabled={busy || authLoading || !(authEmail ?? email).trim()}
                 >
                   {busy ? (
                     <>
@@ -127,11 +159,6 @@ export function SubscribeSheet({
                     "Subscribe — it's free"
                   )}
                 </Button>
-
-                <p className="text-center text-xs text-muted-foreground">
-                  Default: weekly digest. Choose categories &amp; frequency in
-                  settings later.
-                </p>
               </form>
             </>
           ) : (
@@ -141,9 +168,15 @@ export function SubscribeSheet({
               </div>
               <h3 className="mt-3 text-lg font-semibold">You&apos;re in!</h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                We&apos;ll send your first pick on Monday. Check your inbox to
-                confirm.
+                Your digest will land in your inbox every Monday.
               </p>
+              <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Weekly · sent every Monday
+              </p>
+              {!loggedIn && showSignIn && (
+                <SignInPrompt onDismiss={() => setShowSignIn(false)} />
+              )}
               <Button onClick={onClose} variant="outline" className="mt-4">
                 Done
               </Button>

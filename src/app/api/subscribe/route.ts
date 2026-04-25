@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { sendWelcomeEmail } from "@/lib/email/send-welcome";
 
 /**
  * Phase 1 email capture for daily/weekly digest.
@@ -14,17 +15,13 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const email = String(body.email ?? "").trim().toLowerCase();
     const source = String(body.source ?? "footer");
-    const frequency = String(body.frequency ?? "weekly");
+    // Phase 1: every signup is weekly. Other cadences will come back when we
+    // expand digest tooling — until then the cron flow keeps a single rhythm.
+    const frequency = "weekly";
 
     if (!email || !email.includes("@") || email.length > 320) {
       return NextResponse.json(
         { error: "Invalid email" },
-        { status: 400 }
-      );
-    }
-    if (!["weekly", "3x_week", "daily", "critical_only"].includes(frequency)) {
-      return NextResponse.json(
-        { error: "Invalid frequency" },
         { status: 400 }
       );
     }
@@ -58,7 +55,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ ok: true });
+    // Fire welcome email — idempotent, only sends on first contact.
+    // Don't block the response on failure; log and move on so subscribe
+    // never fails because of a transient Resend hiccup.
+    const welcome = await sendWelcomeEmail({
+      email,
+      source,
+      userId: user?.id ?? null,
+      frequency,
+    });
+    if (!welcome.ok) {
+      console.error("[subscribe] welcome email failed:", welcome.reason);
+    }
+
+    return NextResponse.json({ ok: true, loggedIn: !!user });
   } catch (err) {
     console.error("[subscribe] handler error:", err);
     return NextResponse.json(

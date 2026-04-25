@@ -27,6 +27,8 @@ import {
   LogOut,
   Users,
   MessageSquare,
+  Mail,
+  AtSign,
 } from "lucide-react";
 import { signOut } from "@/lib/actions/auth";
 
@@ -69,7 +71,11 @@ const menuGroups: {
   },
   {
     label: "Administration",
-    items: [{ title: "Users", href: "/users", icon: Users }],
+    items: [
+      { title: "Users", href: "/users", icon: Users },
+      { title: "Subscribers", href: "/subscribers", icon: AtSign },
+      { title: "Email Templates", href: "/email-templates", icon: Mail },
+    ],
   },
 ];
 

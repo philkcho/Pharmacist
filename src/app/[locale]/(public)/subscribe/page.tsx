@@ -52,8 +52,8 @@ export default function SubscribePage() {
         <li className="flex gap-3">
           <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
           <span>
-            <strong>Weekly is the default</strong> (Monday delivery).
-            You can switch to daily or critical-only later in settings.
+            <strong>Delivered every Monday.</strong> One concise digest a
+            week — nothing in between.
           </span>
         </li>
         <li className="flex gap-3">
