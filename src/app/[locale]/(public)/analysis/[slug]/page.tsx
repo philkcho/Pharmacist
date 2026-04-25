@@ -25,7 +25,6 @@ import {
   type IngredientDetail,
   type UsageGuide,
 } from "@/lib/actions/analysis";
-import { StickyBuyBar } from "./sticky-buy-bar";
 import type { Metadata } from "next";
 import { ProductReviewJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
 import { ReferencesSection } from "@/components/seo/references-section";
@@ -333,16 +332,7 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
 
       </div>
 
-      {/* Sticky buy bar — only when purchase links exist in DB */}
-      {data.purchaseOptions.length > 0 && (
-        <StickyBuyBar
-          productName={data.productName}
-          retailers={[]}
-          purchaseOptions={data.purchaseOptions.slice(0, 1)}
-        />
-      )}
-
-      {/* Global Share + Subscribe CTA (mobile sticky + desktop floating) */}
+      {/* Single sticky bottom bar: Buy + Share + Subscribe */}
       <GlobalCtaBar
         shareData={{
           productName: data.productName,
@@ -353,6 +343,16 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
           url: analysisUrl,
           reviewerName: SITE_AUTHOR.displayName,
         }}
+        purchaseOptions={
+          data.purchaseOptions.length > 0
+            ? [
+                {
+                  linkId: data.purchaseOptions[0].linkId,
+                  retailerName: data.purchaseOptions[0].retailerName,
+                },
+              ]
+            : undefined
+        }
       />
     </>
   );
