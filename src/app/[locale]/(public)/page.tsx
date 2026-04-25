@@ -90,6 +90,42 @@ export default async function Home() {
       {/* Mobile-only Consult CTA (desktop uses ConsultSidebar in layout) */}
       <ConsultMobileCta isAuthed={!!user} />
 
+      {/* Worth the Hype? — Trending topics */}
+      <section id="worth-the-hype" className="scroll-mt-24 pb-2 pt-4">
+        <div className="mx-auto max-w-4xl px-4 sm:px-6">
+          <div className="flex items-center justify-between">
+            <h2 className="flex items-center gap-2 text-2xl font-bold">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Worth the Hype?
+            </h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              render={<Link href="/trending" />}
+            >
+              View All
+              <ArrowRight className="ml-1 h-4 w-4" />
+            </Button>
+          </div>
+
+          {trends.length > 0 ? (
+            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {trends.map((trend) => (
+                <TrendCard key={trend.id} trend={trend} />
+              ))}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-lg border border-dashed p-8 text-center text-muted-foreground">
+              <TrendingUp className="mx-auto h-8 w-8 opacity-50" />
+              <p className="mt-2">No trends published yet.</p>
+              <p className="text-sm">
+                Check back soon — new trends are analyzed weekly.
+              </p>
+            </div>
+          )}
+        </div>
+      </section>
+
       {/* Dr.'s Analysis — Expert-analyzed content from video sources */}
       <section id="drs-analysis" className="scroll-mt-24 pb-2 pt-4">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
@@ -162,42 +198,6 @@ export default async function Home() {
           </div>
         </section>
       )}
-
-      {/* Worth the Hype? — Trending topics */}
-      <section id="worth-the-hype" className="scroll-mt-24 py-2">
-        <div className="mx-auto max-w-4xl px-4 sm:px-6">
-          <div className="flex items-center justify-between">
-            <h2 className="flex items-center gap-2 text-2xl font-bold">
-              <Sparkles className="h-5 w-5 text-primary" />
-              Worth the Hype?
-            </h2>
-            <Button
-              variant="ghost"
-              size="sm"
-              render={<Link href="/trending" />}
-            >
-              View All
-              <ArrowRight className="ml-1 h-4 w-4" />
-            </Button>
-          </div>
-
-          {trends.length > 0 ? (
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {trends.map((trend) => (
-                <TrendCard key={trend.id} trend={trend} />
-              ))}
-            </div>
-          ) : (
-            <div className="mt-6 rounded-lg border border-dashed p-8 text-center text-muted-foreground">
-              <TrendingUp className="mx-auto h-8 w-8 opacity-50" />
-              <p className="mt-2">No trends published yet.</p>
-              <p className="text-sm">
-                Check back soon — new trends are analyzed weekly.
-              </p>
-            </div>
-          )}
-        </div>
-      </section>
 
     </div>
   );
