@@ -133,7 +133,7 @@ export function GlobalCtaBar({
           )}
           <button
             onClick={handleShareClick}
-            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-secondary px-2 py-2.5 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 sm:flex-none sm:px-5"
+            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border bg-secondary px-2 py-2.5 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 sm:flex-none sm:px-5"
             aria-label="Share to messenger or social"
           >
             <Share2 className="h-4 w-4 shrink-0" />
@@ -143,12 +143,12 @@ export function GlobalCtaBar({
             <button
               onClick={() => setSubscribeOpen(true)}
               className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary/10 px-2 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 sm:flex-none sm:px-5"
-              aria-label="Subscribe to daily picks"
+              aria-label="Subscribe to weekly picks"
             >
               <Bell className="h-4 w-4 shrink-0" />
               <span className="truncate">
                 <span className="hidden sm:inline">Subscribe</span>
-                <span className="sm:hidden">Daily</span>
+                <span className="sm:hidden">Weekly</span>
               </span>
             </button>
           )}

@@ -56,7 +56,7 @@ export function FooterSubscribe() {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           disabled={busy}
-          aria-label="Email for daily picks"
+          aria-label="Email for weekly picks"
         />
       </div>
       <Button type="submit" size="sm" disabled={busy || !email.trim()}>

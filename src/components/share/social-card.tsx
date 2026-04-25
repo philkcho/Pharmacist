@@ -159,7 +159,7 @@ export const SocialCard = forwardRef<HTMLDivElement, SocialCardProps>(
               <span>Reviewed by {data.reviewerName}</span>
             </div>
             <div className={`opacity-80 ${isStory ? "text-lg" : "text-xs"}`}>
-              {BRAND.domain} · Get daily picks
+              {BRAND.domain} · Get weekly picks
             </div>
           </div>
         </div>

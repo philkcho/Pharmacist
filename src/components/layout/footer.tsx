@@ -11,7 +11,7 @@ export function Footer() {
   return (
     <footer className="mt-auto border-t">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-        {/* Daily picks subscribe */}
+        {/* Weekly picks subscribe */}
         <div className="mb-6 flex flex-col items-start gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-3">
             <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
