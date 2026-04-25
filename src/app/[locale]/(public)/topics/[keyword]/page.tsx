@@ -19,6 +19,11 @@ import {
 } from "@/lib/actions/topics";
 import { ProductImage } from "@/components/ui/product-image";
 import type { Metadata } from "next";
+import { GlobalCtaBar } from "@/components/share/global-cta-bar";
+import { SITE_AUTHOR } from "@/lib/author";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 interface TopicPageProps {
   params: Promise<{ keyword: string; locale: string }>;
@@ -137,6 +142,18 @@ export default async function TopicPage({
         </section>
       )}
 
+      {/* Sticky Share + Subscribe */}
+      <GlobalCtaBar
+        shareData={{
+          productName: data.displayKeyword,
+          verdict: `Top ${data.displayKeyword} products curated by retailer — pharmacist-picked.`,
+          score: null,
+          productImageUrl: null,
+          productType: "Topic",
+          url: `${SITE_URL}/topics/${keyword}`,
+          reviewerName: SITE_AUTHOR.displayName,
+        }}
+      />
     </div>
   );
 }

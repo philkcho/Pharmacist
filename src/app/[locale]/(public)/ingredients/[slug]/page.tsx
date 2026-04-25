@@ -19,6 +19,8 @@ import {
 } from "@/components/seo/json-ld";
 import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
+import { GlobalCtaBar } from "@/components/share/global-cta-bar";
+import { SITE_AUTHOR } from "@/lib/author";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
@@ -283,6 +285,19 @@ export default async function IngredientGuidePage({ params }: Props) {
         Evidence-based ingredient information. Not a substitute for
         individualized medical advice.
       </p>
+
+      {/* Sticky Share + Subscribe */}
+      <GlobalCtaBar
+        shareData={{
+          productName: name,
+          verdict: article.hook ?? null,
+          score: null,
+          productImageUrl: null,
+          productType: "Ingredient guide",
+          url,
+          reviewerName: SITE_AUTHOR.displayName,
+        }}
+      />
     </article>
   );
 }

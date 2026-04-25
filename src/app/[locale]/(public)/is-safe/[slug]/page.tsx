@@ -19,6 +19,8 @@ import {
   ArticleJsonLd,
 } from "@/components/seo/json-ld";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
+import { GlobalCtaBar } from "@/components/share/global-cta-bar";
+import { SITE_AUTHOR } from "@/lib/author";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
@@ -228,6 +230,19 @@ export default async function IsSafePage({ params }: Props) {
         Educational content based on FDA labeling, published research, and
         pharmacist review. Not a substitute for individualized medical advice.
       </p>
+
+      {/* Sticky Share + Subscribe */}
+      <GlobalCtaBar
+        shareData={{
+          productName: `Is ${product.name} safe?`,
+          verdict: article.hookAnswer ?? null,
+          score: null,
+          productImageUrl: product.imageUrl ?? null,
+          productType: "Safety review",
+          url,
+          reviewerName: SITE_AUTHOR.displayName,
+        }}
+      />
     </article>
   );
 }

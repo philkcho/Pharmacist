@@ -26,6 +26,11 @@ import {
 } from "@/components/expert/article-toc";
 import { ReviewerCard } from "@/components/expert/reviewer-card";
 import { ProductsAtAGlance } from "@/components/expert/products-at-a-glance";
+import { GlobalCtaBar } from "@/components/share/global-cta-bar";
+import { SITE_AUTHOR } from "@/lib/author";
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
 interface ExpertDetailProps {
   params: Promise<{ slug: string }>;
@@ -312,6 +317,19 @@ export default async function ExpertDetailPage({ params }: ExpertDetailProps) {
           </div>
         </div>
       </div>
+
+      {/* Sticky Share + Subscribe (mobile bottom / desktop floating) */}
+      <GlobalCtaBar
+        shareData={{
+          productName: pick.title,
+          verdict: pick.summary ?? null,
+          score: null,
+          productImageUrl: pick.thumbnailUrl ?? null,
+          productType: categoryLabel,
+          url: `${SITE_URL}/expert/${slug}`,
+          reviewerName: SITE_AUTHOR.displayName,
+        }}
+      />
     </article>
   );
 }

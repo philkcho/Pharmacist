@@ -19,6 +19,8 @@ import {
 } from "@/components/seo/json-ld";
 import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
+import { GlobalCtaBar } from "@/components/share/global-cta-bar";
+import { SITE_AUTHOR } from "@/lib/author";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
@@ -225,6 +227,19 @@ export default async function ComparePage({ params }: Props) {
           <ArrowRight className="h-5 w-5 text-primary" />
         </Link>
       </div>
+
+      {/* Sticky Share + Subscribe */}
+      <GlobalCtaBar
+        shareData={{
+          productName: `${productA.name} vs ${productB.name}`,
+          verdict: article.hook ?? null,
+          score: null,
+          productImageUrl: productA.imageUrl ?? productB.imageUrl ?? null,
+          productType: "Comparison",
+          url,
+          reviewerName: SITE_AUTHOR.displayName,
+        }}
+      />
     </article>
   );
 }
