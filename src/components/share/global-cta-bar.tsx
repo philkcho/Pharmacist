@@ -1,10 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Share2, Bell, ShoppingCart, ExternalLink } from "lucide-react";
 import { ShareSheet } from "./share-sheet";
 import { SubscribeSheet } from "@/components/subscribe/subscribe-sheet";
 import type { SocialCardData } from "./social-card";
+
+/**
+ * Anchors the bar to the visible bottom even when iOS Safari's URL/tab bar
+ * slides back in (which otherwise hides position:fixed bottom:0 elements
+ * behind it on scroll-up). Uses VisualViewport API; no-op on browsers
+ * that already pin fixed bars correctly (Android Chrome, desktop).
+ */
+function useVisualViewportPin() {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!el || !vv) return;
+
+    const update = () => {
+      // How far the visible bottom sits above the layout viewport bottom.
+      // Positive when iOS toolbars cover part of the layout viewport.
+      const offset = Math.max(
+        0,
+        window.innerHeight - (vv.height + vv.offsetTop)
+      );
+      el.style.transform = offset > 0 ? `translateY(-${offset}px)` : "";
+    };
+
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    window.addEventListener("orientationchange", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+      window.removeEventListener("orientationchange", update);
+    };
+  }, []);
+
+  return ref;
+}
 
 export interface CtaPurchaseOption {
   linkId: number;
@@ -38,6 +77,7 @@ export function GlobalCtaBar({
 }: GlobalCtaBarProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const barRef = useVisualViewportPin();
 
   const buyOption = purchaseOptions?.[0];
   const message = buildShareMessage(shareData);
@@ -65,46 +105,51 @@ export function GlobalCtaBar({
   return (
     <>
       {/* Single sticky bottom bar — mobile + desktop.
-          z-50 to sit above the floating chat button (also z-50 — but the chat
-          button is small and sits in the right inset).
-          paddingBottom respects iOS home-indicator safe area so the bar stays
-          tappable on iPhone X+. pr-20 on mobile reserves space for the
-          floating chat button at right-5 so neither blocks the other. */}
+          The chat-sidebar floating button now sits ABOVE this bar (bottom-24)
+          so the bar can take the full width.
+          paddingBottom respects iOS home-indicator safe area on iPhone X+.
+          The visualViewport pin keeps the bar glued to the visible bottom
+          when the URL/tab bar slides in or out (Android Chrome + iOS Safari). */}
       <div
-        className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        ref={barRef}
+        className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80 will-change-transform"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5 pr-20 sm:px-6 sm:py-3 sm:pr-6">
+        <div className="mx-auto flex w-full max-w-3xl items-center gap-2 px-3 py-2.5 sm:px-6 sm:py-3">
           {buyOption && (
             <a
               href={`/api/click/${buyOption.linkId}?ref=analysis_page`}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-primary px-3 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:flex-none sm:px-5"
+              className="flex min-w-0 flex-1 items-center justify-center gap-1.5 truncate rounded-lg bg-primary px-2 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 sm:flex-none sm:px-5"
             >
-              <ShoppingCart className="h-4 w-4" />
-              <span className="hidden sm:inline">Buy on </span>
-              {buyOption.retailerName}
-              <ExternalLink className="h-3 w-3 opacity-80" />
+              <ShoppingCart className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                <span className="hidden sm:inline">Buy on </span>
+                {buyOption.retailerName}
+              </span>
+              <ExternalLink className="h-3 w-3 shrink-0 opacity-80" />
             </a>
           )}
           <button
             onClick={handleShareClick}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-secondary px-3 py-2.5 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 sm:flex-none sm:px-5"
+            className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg bg-secondary px-2 py-2.5 text-sm font-semibold text-secondary-foreground transition-colors hover:bg-secondary/80 sm:flex-none sm:px-5"
             aria-label="Share to messenger or social"
           >
-            <Share2 className="h-4 w-4" />
-            Share
+            <Share2 className="h-4 w-4 shrink-0" />
+            <span>Share</span>
           </button>
           {showSubscribe && (
             <button
               onClick={() => setSubscribeOpen(true)}
-              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 sm:flex-none sm:px-5"
+              className="flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary/10 px-2 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 sm:flex-none sm:px-5"
               aria-label="Subscribe to daily picks"
             >
-              <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Subscribe</span>
-              <span className="sm:hidden">Daily picks</span>
+              <Bell className="h-4 w-4 shrink-0" />
+              <span className="truncate">
+                <span className="hidden sm:inline">Subscribe</span>
+                <span className="sm:hidden">Daily</span>
+              </span>
             </button>
           )}
         </div>

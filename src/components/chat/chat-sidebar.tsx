@@ -271,15 +271,19 @@ export function ChatSidebar() {
         {!mobileOpen && (
           <button
             onClick={() => setMobileOpen(true)}
-            className="fixed bottom-5 right-5 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+            className="fixed bottom-24 right-4 z-[60] flex h-12 w-12 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105 active:scale-95"
+            style={{ marginBottom: "env(safe-area-inset-bottom)" }}
             aria-label="Ask PharmCare"
           >
-            <MessageCircle className="h-6 w-6" />
+            <MessageCircle className="h-5 w-5" />
           </button>
         )}
 
         {mobileOpen && (
-          <div className="fixed bottom-5 right-5 z-50 h-[520px] w-[380px] overflow-hidden rounded-2xl border bg-background shadow-2xl">
+          <div
+            className="fixed inset-x-3 bottom-24 z-[60] h-[70vh] max-h-[520px] overflow-hidden rounded-2xl border bg-background shadow-2xl sm:inset-x-auto sm:right-5 sm:w-[380px]"
+            style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+          >
             {chatContent}
           </div>
         )}

@@ -68,6 +68,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   maximumScale: 5,
   viewportFit: "cover",
+  // iOS Safari: when the URL/tab bar slides in/out, fixed bottom-0
+  // elements can get hidden behind it. interactiveWidget=resizes-content
+  // tells Safari to resize the layout viewport so fixed elements stay
+  // glued to the *visible* bottom in both scroll directions.
+  interactiveWidget: "resizes-content",
 };
 
 export default async function LocaleLayout({
