@@ -11,11 +11,11 @@ export const metadata: Metadata = {
   title: "Browse Categories — AI PharmCare",
   description:
     "Browse pharmacist-reviewed health and beauty products by category — pain relief, allergy, sleep, K-beauty, and more. Each category links to top products and trends.",
-  alternates: { canonical: `${SITE_URL}/categories` },
+  alternates: { canonical: `${SITE_URL}/explore` },
   openGraph: {
     title: "All Categories — AI PharmCare",
     description: "Pharmacist-reviewed products organized by category.",
-    url: `${SITE_URL}/categories`,
+    url: `${SITE_URL}/explore`,
     type: "website",
   },
 };

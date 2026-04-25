@@ -109,7 +109,7 @@ export function MobileMenu({ showAdmin, userEmail }: MobileMenuProps) {
           <MenuLink href="/expert" icon={FileText} onClick={close}>
             Dr.&apos;s Analysis
           </MenuLink>
-          <MenuLink href="/categories" icon={LayoutGrid} onClick={close}>
+          <MenuLink href="/explore" icon={LayoutGrid} onClick={close}>
             Popular Categories
           </MenuLink>
           <MenuLink
