@@ -66,9 +66,11 @@ export function MobileMenu({ showAdmin, userEmail }: MobileMenuProps) {
             className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm lg:hidden"
           />
 
-          {/* Drawer (right side) */}
+          {/* Drawer (right side). h-dvh stays correct as the Android URL
+              bar slides in/out; min-h-0 + overflow-y-auto on the inner nav
+              keeps the menu items scrollable even on short viewports. */}
           <div
-            className="fixed inset-y-0 right-0 z-[70] flex w-[300px] max-w-[85vw] flex-col bg-background shadow-2xl lg:hidden"
+            className="fixed right-0 top-0 z-[70] flex h-dvh w-[300px] max-w-[85vw] flex-col bg-background shadow-2xl lg:hidden"
             style={{ paddingTop: "env(safe-area-inset-top)" }}
             role="dialog"
             aria-modal="true"
@@ -97,7 +99,12 @@ export function MobileMenu({ showAdmin, userEmail }: MobileMenuProps) {
               </div>
             )}
 
-            <nav className="flex-1 overflow-y-auto py-2">
+            <nav
+              className="min-h-0 flex-1 overflow-y-auto py-2"
+              style={{
+                WebkitOverflowScrolling: "touch",
+              }}
+            >
               {/* Group 1: Discover */}
               <GroupLabel>Discover</GroupLabel>
               <MenuLink href="/trending" icon={Sparkles} onClick={close}>
