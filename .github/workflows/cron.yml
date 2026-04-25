@@ -1,0 +1,106 @@
+name: Content + product cron triggers
+
+# Vercel Hobby allows only 2 daily cron jobs. We keep /api/cron/digest on
+# Vercel (it's the user-facing email pipeline) and run the four content
+# pipelines + the quarterly refresh from GitHub Actions instead.
+#
+# All times are UTC. KST = UTC + 9.
+#
+# Required GitHub secrets (Settings → Secrets and variables → Actions):
+#   CRON_SECRET   — same value as Vercel env CRON_SECRET. Used as the
+#                   Authorization: Bearer header on each cron endpoint.
+#   SITE_URL      — optional, defaults to https://www.aipharmcare.com.
+#                   Override only if you want to point at a preview env.
+
+on:
+  schedule:
+    - cron: "0 9 * * *"      # 09:00 UTC = 18:00 KST — weekly (trend ingest + analysis)
+    - cron: "0 10 * * *"     # 10:00 UTC = 19:00 KST — products batch
+    - cron: "0 11 * * *"     # 11:00 UTC = 20:00 KST — fill incomplete products
+    - cron: "0 12 * * *"     # 12:00 UTC = 21:00 KST — SEO content
+    - cron: "0 2 1 */3 *"    # 02:00 UTC on day 1 of every 3rd month — refresh top products
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Which cron to run manually"
+        required: true
+        type: choice
+        options:
+          - weekly
+          - products
+          - fill
+          - seo-content
+          - refresh-top-products
+
+jobs:
+  trigger:
+    name: Trigger Vercel cron endpoint
+    runs-on: ubuntu-latest
+    timeout-minutes: 25 # products/fill batches can take ~20 minutes
+    steps:
+      - name: Resolve target endpoint
+        id: route
+        env:
+          MANUAL_TARGET: ${{ github.event.inputs.target }}
+        run: |
+          if [ -n "$MANUAL_TARGET" ]; then
+            target="$MANUAL_TARGET"
+          else
+            case "${{ github.event.schedule }}" in
+              "0 9 * * *")     target="weekly" ;;
+              "0 10 * * *")    target="products" ;;
+              "0 11 * * *")    target="fill" ;;
+              "0 12 * * *")    target="seo-content" ;;
+              "0 2 1 */3 *")   target="refresh-top-products" ;;
+              *)               target="" ;;
+            esac
+          fi
+
+          case "$target" in
+            weekly)                 path="/api/cron/weekly" ;;
+            products)               path="/api/cron/products?limit=20" ;;
+            fill)                   path="/api/cron/fill?limit=15" ;;
+            seo-content)            path="/api/cron/seo-content" ;;
+            refresh-top-products)   path="/api/cron/refresh-top-products" ;;
+            *)
+              echo "::error::No matching target for schedule"
+              exit 1
+              ;;
+          esac
+
+          echo "target=$target" >> $GITHUB_OUTPUT
+          echo "path=$path" >> $GITHUB_OUTPUT
+
+      - name: Curl Vercel endpoint
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          SITE_URL: ${{ secrets.SITE_URL || 'https://www.aipharmcare.com' }}
+          PATH_PARAM: ${{ steps.route.outputs.path }}
+          TARGET_NAME: ${{ steps.route.outputs.target }}
+        run: |
+          if [ -z "$CRON_SECRET" ]; then
+            echo "::error::CRON_SECRET secret is not set"
+            exit 1
+          fi
+
+          full_url="${SITE_URL}${PATH_PARAM}"
+          echo "▶ Triggering: $TARGET_NAME → $full_url"
+
+          response_file=$(mktemp)
+          http_code=$(curl --silent --show-error --location \
+            --max-time 1500 \
+            --output "$response_file" \
+            --write-out "%{http_code}" \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$full_url")
+
+          echo "HTTP $http_code"
+          echo "─── response ───"
+          cat "$response_file" || true
+          echo
+          echo "────────────────"
+
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Cron $TARGET_NAME returned HTTP $http_code"
+            exit 1
+          fi
