@@ -64,9 +64,17 @@ export function GlobalCtaBar({
 
   return (
     <>
-      {/* Single sticky bottom bar — mobile + desktop */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80">
-        <div className="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5 sm:px-6 sm:py-3">
+      {/* Single sticky bottom bar — mobile + desktop.
+          z-50 to sit above the floating chat button (also z-50 — but the chat
+          button is small and sits in the right inset).
+          paddingBottom respects iOS home-indicator safe area so the bar stays
+          tappable on iPhone X+. pr-20 on mobile reserves space for the
+          floating chat button at right-5 so neither blocks the other. */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-50 border-t bg-background/95 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+      >
+        <div className="mx-auto flex max-w-3xl items-center gap-2 px-3 py-2.5 pr-20 sm:px-6 sm:py-3 sm:pr-6">
           {buyOption && (
             <a
               href={`/api/click/${buyOption.linkId}?ref=analysis_page`}
