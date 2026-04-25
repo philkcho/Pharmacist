@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { LogIn, Pill } from "lucide-react";
 import { HeaderSearchBar } from "./header-search-bar";
+import { MobileMenu } from "./mobile-menu";
 import { signOut } from "@/lib/actions/auth";
 import { Button } from "@/components/ui/button";
 
@@ -28,32 +29,32 @@ export function Header({ showAdmin, userEmail }: HeaderProps) {
           <HeaderSearchBar />
         </div>
 
-        <nav className="flex min-w-0 shrink items-center gap-3 text-sm font-medium sm:shrink-0 sm:gap-4">
+        <nav className="hidden shrink-0 items-center gap-4 text-sm font-medium lg:flex">
           {showAdmin && (
             <Link
               href="/dashboard"
-              className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
+              className="text-muted-foreground transition-colors hover:text-foreground"
             >
               Admin
             </Link>
           )}
           <Link
             href="/ask"
-            className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            className="text-muted-foreground transition-colors hover:text-foreground"
           >
             Community Q&amp;A
           </Link>
           {userEmail && (
             <Link
               href="/consult"
-              className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
+              className="text-muted-foreground transition-colors hover:text-foreground"
             >
               My questions
             </Link>
           )}
           <Link
             href="/about"
-            className="hidden text-muted-foreground transition-colors hover:text-foreground sm:inline"
+            className="text-muted-foreground transition-colors hover:text-foreground"
           >
             {t("nav.about")}
           </Link>
@@ -86,9 +87,12 @@ export function Header({ showAdmin, userEmail }: HeaderProps) {
             </Button>
           )}
         </nav>
+
+        {/* Mobile + tablet hamburger (drawer) */}
+        <MobileMenu showAdmin={showAdmin} userEmail={userEmail} />
       </div>
 
-      {/* Mobile search bar — full width below header */}
+      {/* Phone-only search bar — full width below header (≥ sm uses inline) */}
       <div className="border-t px-4 py-2 sm:hidden">
         <HeaderSearchBar />
       </div>
