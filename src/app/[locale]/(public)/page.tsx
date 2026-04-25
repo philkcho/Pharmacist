@@ -91,7 +91,7 @@ export default async function Home() {
       <ConsultMobileCta isAuthed={!!user} />
 
       {/* Dr.'s Analysis — Expert-analyzed content from video sources */}
-      <section className="pb-2 pt-4">
+      <section id="drs-analysis" className="scroll-mt-24 pb-2 pt-4">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-2xl font-bold">
@@ -134,7 +134,7 @@ export default async function Home() {
 
       {/* Community Q&A — public pharmacist-reviewed consults */}
       {publicConsults.length > 0 && (
-        <section className="pb-2 pt-4">
+        <section id="community-qa" className="scroll-mt-24 pb-2 pt-4">
           <div className="mx-auto max-w-4xl px-4 sm:px-6">
             <div className="flex items-center justify-between">
               <h2 className="flex items-center gap-2 text-2xl font-bold">
@@ -164,7 +164,7 @@ export default async function Home() {
       )}
 
       {/* Worth the Hype? — Trending topics */}
-      <section className="py-2">
+      <section id="worth-the-hype" className="scroll-mt-24 py-2">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">
           <div className="flex items-center justify-between">
             <h2 className="flex items-center gap-2 text-2xl font-bold">

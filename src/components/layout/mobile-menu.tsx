@@ -101,19 +101,19 @@ export function MobileMenu({ showAdmin, userEmail }: MobileMenuProps) {
           className="min-h-0 flex-1 overflow-y-auto py-2"
           style={{ WebkitOverflowScrolling: "touch" }}
         >
-          {/* Group 1: Discover */}
+          {/* Group 1: Discover — primary destinations on the homepage */}
           <GroupLabel>Discover</GroupLabel>
-          <MenuLink href="/trending" icon={Sparkles} onClick={close}>
+          <MenuLink href="/#worth-the-hype" icon={Sparkles} onClick={close}>
             Worth the Hype?
           </MenuLink>
-          <MenuLink href="/expert" icon={FileText} onClick={close}>
+          <MenuLink href="/#drs-analysis" icon={FileText} onClick={close}>
             Dr.&apos;s Analysis
           </MenuLink>
           <MenuLink href="/explore" icon={LayoutGrid} onClick={close}>
             Popular Categories
           </MenuLink>
           <MenuLink
-            href="/ask"
+            href="/#community-qa"
             icon={MessageCircleQuestion}
             onClick={close}
           >
