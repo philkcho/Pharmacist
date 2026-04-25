@@ -29,7 +29,7 @@ import type {
 } from "@/lib/ai/types";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
+import { ArticleJsonLd, BreadcrumbListJsonLd, MedicalWebPageJsonLd } from "@/components/seo/json-ld";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 import { ArticleHero } from "@/components/expert/article-hero";
 import { TrendCover } from "@/components/trending/trend-cover";
@@ -180,6 +180,15 @@ export default async function TrendPage({ params }: TrendPageProps) {
         dateModified={analysis.generatedAt}
         imageUrl={topic.imageUrl}
       />
+      {topic.category === "health" && (
+        <MedicalWebPageJsonLd
+          name={heroTitle}
+          description={synthesis?.answer?.replace(/\[\d+\]/g, "").slice(0, 200) ?? topic.queryText}
+          url={articleUrl}
+          lastReviewed={analysis.generatedAt}
+          about={topic.queryText}
+        />
+      )}
       <BreadcrumbListJsonLd
         items={[
           { name: "Home", url: `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com"}/` },

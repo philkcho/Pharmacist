@@ -4,7 +4,7 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { PageTracker } from "@/components/analytics/page-tracker";
-import { OrganizationJsonLd } from "@/components/seo/json-ld";
+import { OrganizationJsonLd, WebSiteJsonLd } from "@/components/seo/json-ld";
 import { BRAND } from "@/lib/brand";
 import { SITE_AUTHOR } from "@/lib/author";
 import "./globals.css";
@@ -95,6 +95,7 @@ export default async function LocaleLayout({
     >
       <body className="flex min-h-full flex-col overflow-x-clip">
         <OrganizationJsonLd />
+        <WebSiteJsonLd />
         <NextIntlClientProvider>
           <PageTracker />
           {children}

@@ -16,6 +16,7 @@ import { ProductImage } from "@/components/ui/product-image";
 import {
   BreadcrumbListJsonLd,
   ArticleJsonLd,
+  MedicalWebPageJsonLd,
 } from "@/components/seo/json-ld";
 import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
@@ -81,6 +82,16 @@ export default async function ComparePage({ params }: Props) {
         datePublished={result.data.generatedAt}
         dateModified={result.data.generatedAt}
       />
+      {productA.productType !== "cosmetic" &&
+        productB.productType !== "cosmetic" && (
+          <MedicalWebPageJsonLd
+            name={`${productA.name} vs ${productB.name} — Pharmacist Comparison`}
+            description={article.hook}
+            url={url}
+            lastReviewed={result.data.generatedAt}
+            about={`${productA.genericName ?? productA.name} vs ${productB.genericName ?? productB.name}`}
+          />
+        )}
       <BreadcrumbListJsonLd
         items={[
           { name: "Home", url: `${SITE_URL}/` },

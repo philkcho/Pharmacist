@@ -14,10 +14,88 @@ export function OrganizationJsonLd() {
   const data = {
     "@context": "https://schema.org",
     "@type": "Organization",
+    "@id": `${SITE_URL}/#organization`,
     name: BRAND.legalName,
     url: SITE_URL,
     description: BRAND.shortDescription,
+    logo: `${SITE_URL}/icon.png`,
+    founder: authorPersonSchema(),
+    sameAs: [SITE_AUTHOR.linkedinUrl],
   };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+// ── WebSite (sitelinks search box hint) ─────────────────────
+
+export function WebSiteJsonLd() {
+  const data = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${SITE_URL}/#website`,
+    url: SITE_URL,
+    name: BRAND.name,
+    description: BRAND.shortDescription,
+    publisher: { "@id": `${SITE_URL}/#organization` },
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${SITE_URL}/search?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
+    />
+  );
+}
+
+// ── MedicalWebPage (YMYL signal for health content) ─────────
+
+export function MedicalWebPageJsonLd({
+  name,
+  description,
+  url,
+  lastReviewed,
+  about,
+  audience = "Patient",
+}: {
+  name: string;
+  description: string;
+  url: string;
+  lastReviewed?: string | null;
+  /** Free-text label of the medical entity discussed (e.g. drug or condition name). */
+  about?: string;
+  audience?: "Patient" | "Clinician";
+}) {
+  const data: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "MedicalWebPage",
+    name: name.slice(0, 110),
+    description: description.slice(0, 200),
+    url,
+    inLanguage: "en-US",
+    audience: { "@type": "MedicalAudience", audienceType: audience },
+    specialty: "Pharmacy",
+    reviewedBy: authorPersonSchema(),
+    publisher: { "@id": `${SITE_URL}/#organization` },
+  };
+
+  if (lastReviewed) data.lastReviewed = lastReviewed;
+  if (about) {
+    data.about = { "@type": "MedicalEntity", name: about };
+    data.mainContentOfPage = { "@type": "WebPageElement", about };
+  }
 
   return (
     <script

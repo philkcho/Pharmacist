@@ -26,7 +26,7 @@ import {
   type UsageGuide,
 } from "@/lib/actions/analysis";
 import type { Metadata } from "next";
-import { ProductReviewJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
+import { ProductReviewJsonLd, BreadcrumbListJsonLd, MedicalWebPageJsonLd } from "@/components/seo/json-ld";
 import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 import { ScoreBadge } from "@/components/share/score-badge";
@@ -90,6 +90,12 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
         imageUrl={data.imageUrl}
         pros={data.pros}
         cons={data.cons}
+      />
+      <MedicalWebPageJsonLd
+        name={`${data.productName} — Pharmacist Analysis`}
+        description={data.verdict ?? `Analysis of ${data.productName}`}
+        url={analysisUrl}
+        about={data.genericName ?? data.productName}
       />
       <BreadcrumbListJsonLd
         items={[

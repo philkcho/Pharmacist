@@ -17,6 +17,7 @@ import { ProductImage } from "@/components/ui/product-image";
 import {
   BreadcrumbListJsonLd,
   ArticleJsonLd,
+  MedicalWebPageJsonLd,
 } from "@/components/seo/json-ld";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 import { GlobalCtaBar } from "@/components/share/global-cta-bar";
@@ -87,6 +88,13 @@ export default async function IsSafePage({ params }: Props) {
         datePublished={data.generatedAt}
         dateModified={data.generatedAt}
         imageUrl={product.imageUrl}
+      />
+      <MedicalWebPageJsonLd
+        name={`Is ${product.name} Safe?`}
+        description={article.hookAnswer}
+        url={url}
+        lastReviewed={data.generatedAt}
+        about={product.genericName ?? product.name}
       />
       <BreadcrumbListJsonLd
         items={[
