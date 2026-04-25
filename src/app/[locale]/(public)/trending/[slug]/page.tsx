@@ -33,6 +33,8 @@ import { ArticleJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
 import { ArticleHero } from "@/components/expert/article-hero";
 import { TrendCover } from "@/components/trending/trend-cover";
+import { GlobalCtaBar } from "@/components/share/global-cta-bar";
+import { SITE_AUTHOR } from "@/lib/author";
 
 // ============================================================
 // Metadata
@@ -414,6 +416,20 @@ export default async function TrendPage({ params }: TrendPageProps) {
       {/* ===== Section 9 — Sources ===== */}
       {sources.length > 0 && <SourcesSection sources={sources} />}
       </div>
+
+      {/* Sticky Share-only bar (no Subscribe on trend articles) */}
+      <GlobalCtaBar
+        showSubscribe={false}
+        shareData={{
+          productName: heroTitle,
+          verdict: synthesis?.answer?.replace(/\[\d+\]/g, "").slice(0, 200) ?? null,
+          score: null,
+          productImageUrl: topic.imageUrl,
+          productType: categoryLabel,
+          url: articleUrl,
+          reviewerName: SITE_AUTHOR.displayName,
+        }}
+      />
     </article>
   );
 }

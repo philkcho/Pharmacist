@@ -179,12 +179,12 @@ export function ShareSheet({ open, onClose, data }: ShareSheetProps) {
 }
 
 function buildShareMessage(data: SocialCardData): string {
-  const type = data.productType ?? "product";
-  const reviewer = data.reviewerName.split(",")[0]; // "Dr. Younghun Cho, PharmD" → "Dr. Younghun Cho"
+  const reviewer = data.reviewerName.split(",")[0];
   if (data.score !== null && data.score !== undefined) {
+    const type = data.productType ?? "product";
     return `Found a ${data.score}/100 ${type} verified by a real pharmacist 🧠 — review by ${reviewer}.`;
   }
-  return `Pharmacist-verified ${type} review by ${reviewer}.`;
+  return `${data.productName} — pharmacist insight from ${reviewer} 🧠`;
 }
 
 function slugify(s: string): string {

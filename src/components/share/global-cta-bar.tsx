@@ -18,6 +18,8 @@ export interface GlobalCtaBarProps {
   defaultCategorySlug?: string | null;
   /** Optional Buy buttons folded into the same sticky bar (analysis page). */
   purchaseOptions?: CtaPurchaseOption[];
+  /** Hide the Subscribe button (e.g. on trend articles where Share is the only CTA). */
+  showSubscribe?: boolean;
 }
 
 /**
@@ -32,6 +34,7 @@ export function GlobalCtaBar({
   shareData,
   defaultCategorySlug,
   purchaseOptions,
+  showSubscribe = true,
 }: GlobalCtaBarProps) {
   const [shareOpen, setShareOpen] = useState(false);
   const [subscribeOpen, setSubscribeOpen] = useState(false);
@@ -85,15 +88,17 @@ export function GlobalCtaBar({
             <Share2 className="h-4 w-4" />
             Share
           </button>
-          <button
-            onClick={() => setSubscribeOpen(true)}
-            className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 sm:flex-none sm:px-5"
-            aria-label="Subscribe to daily picks"
-          >
-            <Bell className="h-4 w-4" />
-            <span className="hidden sm:inline">Subscribe</span>
-            <span className="sm:hidden">Daily picks</span>
-          </button>
+          {showSubscribe && (
+            <button
+              onClick={() => setSubscribeOpen(true)}
+              className="flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary bg-primary/10 px-3 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20 sm:flex-none sm:px-5"
+              aria-label="Subscribe to daily picks"
+            >
+              <Bell className="h-4 w-4" />
+              <span className="hidden sm:inline">Subscribe</span>
+              <span className="sm:hidden">Daily picks</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -115,10 +120,12 @@ export function GlobalCtaBar({
 }
 
 function buildShareMessage(data: SocialCardData): string {
-  const type = data.productType ?? "product";
   const reviewer = data.reviewerName.split(",")[0]; // strip ", PharmD"
+  // Scored product (analysis page)
   if (data.score !== null && data.score !== undefined) {
+    const type = data.productType ?? "product";
     return `Found a ${data.score}/100 ${type} verified by a real pharmacist 🧠 — review by ${reviewer}.`;
   }
-  return `Pharmacist-verified ${type} review by ${reviewer}.`;
+  // Trend article / unscored content — lead with the title itself
+  return `${data.productName} — pharmacist insight from ${reviewer} 🧠`;
 }
