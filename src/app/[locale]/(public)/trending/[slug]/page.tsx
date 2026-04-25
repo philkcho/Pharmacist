@@ -417,9 +417,8 @@ export default async function TrendPage({ params }: TrendPageProps) {
       {sources.length > 0 && <SourcesSection sources={sources} />}
       </div>
 
-      {/* Sticky Share-only bar (no Subscribe on trend articles) */}
+      {/* Sticky Share + Weekly bar (matches every other content surface) */}
       <GlobalCtaBar
-        showSubscribe={false}
         shareData={{
           productName: heroTitle,
           verdict: synthesis?.answer?.replace(/\[\d+\]/g, "").slice(0, 200) ?? null,
