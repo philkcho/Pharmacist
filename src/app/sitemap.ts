@@ -10,15 +10,17 @@ export const revalidate = 3600;
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const admin = createAdminClient();
 
-  // Static pages
+  // Static pages — only real content surfaces. /search is noindex
+  // (intentionally — query results aren't indexable assets), /subscribe
+  // is a functional form so we keep it but at low priority.
   const staticPages: MetadataRoute.Sitemap = [
     { url: `${SITE_URL}/`, changeFrequency: "daily", priority: 1.0 },
     { url: `${SITE_URL}/about`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/ask`, changeFrequency: "weekly", priority: 0.7 },
     { url: `${SITE_URL}/explore`, changeFrequency: "weekly", priority: 0.6 },
-    { url: `${SITE_URL}/subscribe`, changeFrequency: "monthly", priority: 0.5 },
+    { url: `${SITE_URL}/subscribe`, changeFrequency: "monthly", priority: 0.4 },
     { url: `${SITE_URL}/trending`, changeFrequency: "daily", priority: 0.8 },
     { url: `${SITE_URL}/expert`, changeFrequency: "weekly", priority: 0.8 },
-    { url: `${SITE_URL}/search`, changeFrequency: "weekly", priority: 0.4 },
     { url: `${SITE_URL}/privacy`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/terms`, changeFrequency: "yearly", priority: 0.3 },
     { url: `${SITE_URL}/disclosure`, changeFrequency: "yearly", priority: 0.3 },
@@ -65,11 +67,20 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  // "Is X Safe?" SEO pages — one per approved product.
-  // These target long-tail safety queries (pregnancy, alcohol, interactions).
-  const safetyPages: MetadataRoute.Sitemap = (products ?? []).map((p) => ({
+  // "Is X Safe?" SEO pages — ONLY products with the article already
+  // generated and cached. Emitting an /is-safe URL before the article
+  // exists would force Google's crawler to trigger an on-demand Gemini
+  // generation, which times out and gets recorded as "Discovered –
+  // currently not indexed". Gate strictly on safety_article_jsonb.
+  const { data: safetyReady } = await admin
+    .from("medications")
+    .select("slug, safety_article_generated_at")
+    .eq("approval_status", "approved")
+    .not("safety_article_jsonb", "is", null);
+
+  const safetyPages: MetadataRoute.Sitemap = (safetyReady ?? []).map((p) => ({
     url: `${SITE_URL}/is-safe/${p.slug}`,
-    lastModified: p.updated_at ?? undefined,
+    lastModified: p.safety_article_generated_at ?? undefined,
     changeFrequency: "monthly" as const,
     priority: 0.7, // slightly higher — higher search intent
   }));

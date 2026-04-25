@@ -8,6 +8,8 @@ export const metadata: Metadata = {
   description:
     "Pharmacist-reviewed personal consult. Share your stack, get cross-checked guidance from a licensed pharmacist within 48 hours.",
   alternates: { canonical: "/consult/new" },
+  // Auth-required form — not a public content surface.
+  robots: { index: false, follow: false },
 };
 
 export default async function NewConsultPage() {
