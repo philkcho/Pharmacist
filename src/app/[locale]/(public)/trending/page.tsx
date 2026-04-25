@@ -1,13 +1,13 @@
 import { Badge } from "@/components/ui/badge";
-import { TrendingUp, AlertTriangle, Clock } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, Clock } from "lucide-react";
 import Link from "next/link";
 import { listPublishedTrendsWithHeadline, type TrendTopicRow } from "@/lib/actions/trends";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Trending Health & Beauty Topics — AI PharmCare",
+  title: "Worth the Hype? — Trending Health & Beauty | AI PharmCare",
   description:
-    "This week's trending OTC medication, supplement, and skincare topics analyzed by AI with pharmacist oversight.",
+    "Is it worth the hype? Pharmacist-reviewed take on this week's trending OTC medications, supplements, and skincare — backed by FDA data and clinical research.",
   alternates: { canonical: "/trending" },
 };
 
@@ -20,12 +20,14 @@ export default async function TrendingIndexPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Trending This Week
+        <h1 className="flex items-center gap-2 text-3xl font-bold tracking-tight">
+          <Sparkles className="h-7 w-7 text-primary" />
+          Worth the Hype?
         </h1>
         <p className="mt-2 text-muted-foreground">
-          What people are searching for in health and beauty — analyzed by AI,
-          reviewed by pharmacists.
+          What people are searching for in health and beauty this week — read
+          by a pharmacist so you don&apos;t have to. Backed by FDA data and
+          clinical research.
         </p>
       </div>
 
