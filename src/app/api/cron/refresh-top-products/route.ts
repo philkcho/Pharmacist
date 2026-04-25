@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { fetchRealProductImage } from "@/lib/images/search-product-image";
 import { autoGeneratePurchaseLinks } from "@/lib/actions/purchase-links";
+import { withCronReport } from "@/lib/messaging/with-cron-report";
 
 /**
  * Quarterly refresh for featured products.
@@ -26,7 +27,7 @@ export const maxDuration = 300; // 5 min
 const BATCH_LIMIT = 30;
 const STALE_DAYS = 90;
 
-export async function GET(req: Request) {
+async function refreshTopProductsHandler(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -129,3 +130,8 @@ export async function GET(req: Request) {
     timestamp: new Date().toISOString(),
   });
 }
+
+export const GET = withCronReport(
+  "refresh-top-products",
+  refreshTopProductsHandler
+);

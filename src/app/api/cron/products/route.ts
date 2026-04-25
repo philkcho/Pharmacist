@@ -3,6 +3,7 @@ import {
   processProductBatch,
   getSeedProgress,
 } from "@/lib/actions/product-batch";
+import { withCronReport } from "@/lib/messaging/with-cron-report";
 
 /**
  * Daily product batch pipeline.
@@ -24,7 +25,7 @@ import {
  */
 export const maxDuration = 300; // 5 minutes for batch processing
 
-export async function GET(req: Request) {
+async function productsHandler(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -69,3 +70,5 @@ export async function GET(req: Request) {
     );
   }
 }
+
+export const GET = withCronReport("products", productsHandler);

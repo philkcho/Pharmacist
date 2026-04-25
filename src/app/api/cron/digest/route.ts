@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { curateForSubscriber, type DigestItem } from "@/lib/digest/curate";
 import { renderDigestHtml } from "@/lib/digest/render-email";
 import { sendEmail } from "@/lib/messaging/send-email";
+import { withCronReport } from "@/lib/messaging/with-cron-report";
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
@@ -54,7 +55,7 @@ function frequencyLabel(f: string): string {
   }
 }
 
-export async function GET(req: NextRequest) {
+async function digestHandler(req: NextRequest) {
   // Vercel Cron sends Authorization: Bearer <CRON_SECRET>
   const authHeader = req.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
@@ -164,3 +165,5 @@ export async function GET(req: NextRequest) {
     failures: failures.slice(0, 20),
   });
 }
+
+export const GET = withCronReport("digest", digestHandler);

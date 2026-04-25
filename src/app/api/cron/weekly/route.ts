@@ -4,6 +4,7 @@ import {
   analyzePendingTrends,
 } from "@/lib/actions/trends";
 import { isMondayUtc } from "@/lib/trends/normalize";
+import { withCronReport } from "@/lib/messaging/with-cron-report";
 
 /**
  * Weekly trend pipeline entry point.
@@ -42,7 +43,7 @@ interface CronSummary {
   timestamp: string;
 }
 
-export async function GET(req: Request) {
+async function weeklyHandler(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -123,5 +124,6 @@ export async function GET(req: Request) {
   return NextResponse.json(summary, { status: statusCode });
 }
 
+export const GET = withCronReport("weekly", weeklyHandler);
 // Allow POST for admin manual-trigger buttons that send a body.
 export const POST = GET;

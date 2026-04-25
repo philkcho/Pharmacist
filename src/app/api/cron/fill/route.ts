@@ -3,6 +3,7 @@ import {
   fillIncompleteProducts,
   getIncompleteProductStats,
 } from "@/lib/actions/fill-incomplete-products";
+import { withCronReport } from "@/lib/messaging/with-cron-report";
 
 /**
  * Daily sweep: fills missing image/verdict/analysis on existing medications.
@@ -18,7 +19,7 @@ import {
  */
 export const maxDuration = 300;
 
-export async function GET(req: Request) {
+async function fillHandler(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -58,3 +59,5 @@ export async function GET(req: Request) {
     );
   }
 }
+
+export const GET = withCronReport("fill", fillHandler);

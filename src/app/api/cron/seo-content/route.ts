@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generateSeoContentBatch } from "@/lib/actions/generate-seo-content-batch";
+import { withCronReport } from "@/lib/messaging/with-cron-report";
 
 /**
  * Daily SEO content generation cron.
@@ -16,7 +17,7 @@ import { generateSeoContentBatch } from "@/lib/actions/generate-seo-content-batc
  */
 export const maxDuration = 300;
 
-export async function GET(req: Request) {
+async function seoContentHandler(req: Request) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -56,3 +57,5 @@ export async function GET(req: Request) {
     );
   }
 }
+
+export const GET = withCronReport("seo-content", seoContentHandler);
