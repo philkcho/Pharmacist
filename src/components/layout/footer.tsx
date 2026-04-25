@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { Pill } from "lucide-react";
+import { Pill, Bell } from "lucide-react";
 import { SITE_AUTHOR } from "@/lib/author";
+import { FooterSubscribe } from "@/components/subscribe/footer-subscribe";
 
 export function Footer() {
   const t = useTranslations();
@@ -10,6 +11,22 @@ export function Footer() {
   return (
     <footer className="mt-auto border-t">
       <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        {/* Daily picks subscribe */}
+        <div className="mb-6 flex flex-col items-start gap-3 rounded-lg border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <Bell className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+            <div>
+              <p className="font-medium text-foreground">
+                Get pharmacist-curated picks
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Weekly digest of trending health & beauty products. No spam.
+              </p>
+            </div>
+          </div>
+          <FooterSubscribe />
+        </div>
+
         {/* FDA Disclaimer */}
         <div className="rounded-lg border p-4 text-sm text-muted-foreground">
           <p className="font-medium text-foreground">Medical Disclaimer</p>

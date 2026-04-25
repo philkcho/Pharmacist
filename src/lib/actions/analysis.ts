@@ -45,6 +45,8 @@ export interface AnalysisPageData {
   cons: string[];
   ingredients: IngredientDetail[];
   usageGuide: UsageGuide | null;
+  comparisonScore: number | null;
+  scoringRationale: string | null;
   warnings: string | null;
   sideEffects: string | null;
   purchaseOptions: PurchaseOption[];
@@ -124,7 +126,7 @@ export async function getProductAnalysis(
   const { data: med } = await supabase
     .from("medications")
     .select(
-      "id, name, slug, generic_name, brand_names, description, image_url, product_type, price_range, verdict, pros, cons, ingredient_analysis, usage_guide_jsonb, warnings, side_effects, references_jsonb"
+      "id, name, slug, generic_name, brand_names, description, image_url, product_type, price_range, verdict, pros, cons, ingredient_analysis, usage_guide_jsonb, comparison_score, scoring_rationale, warnings, side_effects, references_jsonb"
     )
     .or(`slug.eq.${slug},name.ilike.%${decoded}%`)
     .limit(1)
@@ -173,6 +175,11 @@ export async function getProductAnalysis(
       cons: parseProsCons(med.cons),
       ingredients: parseIngredients(med.ingredient_analysis),
       usageGuide: parseUsageGuide(med.usage_guide_jsonb),
+      comparisonScore:
+        typeof med.comparison_score === "number"
+          ? (med.comparison_score as number)
+          : null,
+      scoringRationale: (med.scoring_rationale as string) ?? null,
       warnings: (med.warnings as string) ?? null,
       sideEffects: (med.side_effects as string) ?? null,
       purchaseOptions,
@@ -198,6 +205,8 @@ export async function getProductAnalysis(
     cons: [],
     ingredients: [],
     usageGuide: null,
+    comparisonScore: null,
+    scoringRationale: null,
     warnings: null,
     sideEffects: null,
     purchaseOptions: [],

@@ -30,6 +30,9 @@ import type { Metadata } from "next";
 import { ProductReviewJsonLd, BreadcrumbListJsonLd } from "@/components/seo/json-ld";
 import { ReferencesSection } from "@/components/seo/references-section";
 import { ReviewerByline } from "@/components/ui/reviewer-byline";
+import { ScoreBadge } from "@/components/share/score-badge";
+import { GlobalCtaBar } from "@/components/share/global-cta-bar";
+import { SITE_AUTHOR } from "@/lib/author";
 
 interface AnalysisPageProps {
   params: Promise<{ slug: string; locale: string }>;
@@ -154,6 +157,18 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
         </div>
 
         <ReviewerByline className="mt-4" />
+
+        {/* Score Badge — Yuka-style at-a-glance evaluation */}
+        {data.comparisonScore !== null && (
+          <div className="mt-6 rounded-xl border bg-card p-5">
+            <ScoreBadge
+              score={data.comparisonScore}
+              rationale={data.scoringRationale}
+              size="lg"
+              showReviewer={true}
+            />
+          </div>
+        )}
 
         {/* Verdict */}
         {data.verdict && (
@@ -326,6 +341,19 @@ export default async function AnalysisPage({ params }: AnalysisPageProps) {
           purchaseOptions={data.purchaseOptions.slice(0, 1)}
         />
       )}
+
+      {/* Global Share + Subscribe CTA (mobile sticky + desktop floating) */}
+      <GlobalCtaBar
+        shareData={{
+          productName: data.productName,
+          verdict: data.verdict,
+          score: data.comparisonScore,
+          productImageUrl: data.imageUrl,
+          productType: typeLabel[data.productType] ?? data.productType,
+          url: analysisUrl,
+          reviewerName: SITE_AUTHOR.displayName,
+        }}
+      />
     </>
   );
 }
