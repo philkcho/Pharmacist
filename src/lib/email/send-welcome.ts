@@ -12,6 +12,15 @@ interface SendWelcomeInput {
   source: string; // 'signup' | 'footer' | 'sheet' | 'card' | 'subscribe_page' | ...
   userId?: string | null;
   frequency?: string; // defaults to 'weekly'
+  /**
+   * `signup`     — account creation flow. User is NOT yet on the newsletter,
+   *                so we send the plain welcome with a Subscribe CTA. Catch-up
+   *                digest is intentionally skipped — they didn't subscribe.
+   * `subscribed` — subscribe form flow. Send the catch-up digest if curate
+   *                has items, otherwise fall back to a confirmation welcome
+   *                that does NOT pitch another subscription.
+   */
+  mode?: "signup" | "subscribed";
 }
 
 interface SendWelcomeResult {
@@ -22,15 +31,10 @@ interface SendWelcomeResult {
   digestItems?: number; // how many catch-up items the welcome included
 }
 
-// Catch-up digest knobs per frequency: how far back we look and how many
-// items to include in the very first email so the user gets value
-// immediately instead of waiting for the next cron cycle.
-const CATCHUP_TUNING: Record<string, { sinceDays: number; limit: number }> = {
-  weekly: { sinceDays: 14, limit: 4 },
-  "3x_week": { sinceDays: 7, limit: 2 },
-  daily: { sinceDays: 7, limit: 2 },
-  critical_only: { sinceDays: 14, limit: 0 },
-};
+// Catch-up digest knobs: how far back we look and how many items to
+// include in the very first email so a brand-new subscriber gets value
+// immediately instead of waiting until the next Monday.
+const CATCHUP_TUNING = { sinceDays: 14, limit: 4 } as const;
 
 /**
  * Idempotent welcome email dispatcher.
@@ -109,29 +113,31 @@ export async function sendWelcomeEmail(
       }
     }
 
-    // 2) Render + send. Try a catch-up digest first so the user gets
-    //    last week's picks immediately; fall back to a plain welcome
-    //    if the curate pool is empty (e.g. brand-new install with no
-    //    published content).
+    // 2) Render + send.
+    //    - mode 'signup'     → plain welcome with Subscribe CTA. Catch-up
+    //                          digest is intentionally skipped — the user
+    //                          hasn't opted into the newsletter yet.
+    //    - mode 'subscribed' → catch-up digest if curate has items, else
+    //                          a confirmation welcome (no Subscribe CTA).
     const unsubscribeUrl = unsubToken
       ? `${SITE_URL}/api/unsubscribe/${encodeURIComponent(unsubToken)}`
       : undefined;
 
-    const frequency = input.frequency ?? "weekly";
-    const tuning = CATCHUP_TUNING[frequency] ?? CATCHUP_TUNING.weekly;
+    const mode = input.mode ?? "signup";
 
     let items: DigestItem[] = [];
-    if (tuning.limit > 0) {
+    if (mode === "subscribed") {
       try {
         items = await curateForSubscriber(subscriberId, {
-          limit: tuning.limit,
-          sinceDays: tuning.sinceDays,
+          limit: CATCHUP_TUNING.limit,
+          sinceDays: CATCHUP_TUNING.sinceDays,
           dedupeDays: 30,
         });
       } catch (err) {
-        // Curate failure shouldn't block the welcome — just fall back.
+        // Curate failure shouldn't block the welcome — fall back to the
+        // plain confirmation copy below.
         console.error(
-          "[send-welcome] curate failed, falling back to plain welcome:",
+          "[send-welcome] curate failed, falling back to confirmation welcome:",
           err instanceof Error ? err.message : err
         );
       }
@@ -145,21 +151,19 @@ export async function sendWelcomeEmail(
     if (items.length > 0) {
       kind = "welcome_catchup";
       const greeting =
-        "Welcome — you're in! Here are last week's pharmacist-curated picks to get you started. Your regular digest will follow on its normal schedule.";
+        "You're in — here are last week's pharmacist-curated picks to get you started. Your regular weekly digest arrives every Monday from here on.";
       const rendered = renderDigestHtml({
         items,
         unsubscribeUrl: unsubscribeUrl ?? `${SITE_URL}/`,
-        frequencyLabel: frequency === "weekly" ? "weekly" : frequency,
+        frequencyLabel: "weekly",
         greeting,
       });
-      // Override the subject so the very first email reads like a welcome,
-      // not yet another digest edition.
       subject = `Welcome to AI PharmCare — last week's picks inside`;
       html = rendered.html;
       text = rendered.text;
     } else {
       kind = "welcome";
-      const rendered = renderWelcomeEmail({ email, unsubscribeUrl });
+      const rendered = renderWelcomeEmail({ email, unsubscribeUrl, mode });
       subject = rendered.subject;
       html = rendered.html;
       text = rendered.text;

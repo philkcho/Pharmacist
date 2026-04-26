@@ -47,6 +47,14 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "AI PharmCare",
     locale: "en_US",
+    images: [
+      {
+        url: `${SITE_URL}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: "AI PharmCare — Pharmacist-Reviewed Health & Beauty Analysis",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
@@ -86,9 +94,6 @@ export default async function Home() {
           </div>
         </div>
       </section>
-
-      {/* Mobile-only Consult CTA (desktop uses ConsultSidebar in layout) */}
-      <ConsultMobileCta isAuthed={!!user} />
 
       {/* Worth the Hype? — Trending topics */}
       <section id="worth-the-hype" className="scroll-mt-24 pb-2 pt-4">
@@ -167,6 +172,11 @@ export default async function Home() {
           )}
         </div>
       </section>
+
+      {/* Mobile-only Consult CTA — sits right above Community Q&A so the
+          ask flow is colocated with the public answers gallery. Desktop
+          users already see ConsultSidebar in the layout. */}
+      <ConsultMobileCta isAuthed={!!user} />
 
       {/* Community Q&A — public pharmacist-reviewed consults */}
       {publicConsults.length > 0 && (

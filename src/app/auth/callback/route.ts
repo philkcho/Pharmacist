@@ -75,11 +75,13 @@ export async function GET(request: Request) {
         // Welcome email — idempotent (welcome_sent_at gate). Fires once
         // per email address: first sign-in for new accounts, no-op for
         // returning users or anyone who already received one via the
-        // subscribe form.
+        // subscribe form. mode='signup' → plain welcome with Subscribe
+        // CTA (account creation does not auto-subscribe).
         const welcome = await sendWelcomeEmail({
           email: user.email,
           source: "signup",
           userId: user.id,
+          mode: "signup",
         });
         if (!welcome.ok) {
           console.error("[auth/callback] welcome email failed:", welcome.reason);

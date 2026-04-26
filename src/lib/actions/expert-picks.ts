@@ -2,6 +2,7 @@
 
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { submitToIndexNow } from "@/lib/seo/indexnow";
 import {
   extractYoutubeId,
   fetchTranscript,
@@ -411,13 +412,15 @@ export async function createExpertPick(youtubeUrl: string): Promise<{
  */
 export async function publishExpertPick(id: number): Promise<boolean> {
   const supabase = await createAdminClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("expert_picks")
     .update({
       status: "published",
       published_at: new Date().toISOString(),
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("slug")
+    .maybeSingle();
 
   if (error) {
     console.error("[expert-picks] publish error:", error.message);
@@ -426,6 +429,10 @@ export async function publishExpertPick(id: number): Promise<boolean> {
 
   revalidatePath("/");
   revalidatePath("/expert");
+  if (data?.slug) {
+    revalidatePath(`/expert/${data.slug}`);
+    void submitToIndexNow([`/expert/${data.slug}`]);
+  }
   return true;
 }
 

@@ -14,6 +14,11 @@ interface ProductImageProps {
   className?: string;
   fallbackClassName?: string;
   iconSize?: number;
+  /** When the caller knows this image is the LCP candidate (first card
+   *  in the viewport), set `priority` so the browser fetches eagerly with
+   *  high fetchPriority. Default is lazy + async decode so a long list of
+   *  ProductImages doesn't compete with above-the-fold paints. */
+  priority?: boolean;
 }
 
 /**
@@ -30,6 +35,7 @@ export function ProductImage({
   className,
   fallbackClassName,
   iconSize = 40,
+  priority = false,
 }: ProductImageProps) {
   const [failed, setFailed] = useState(false);
 
@@ -55,6 +61,9 @@ export function ProductImage({
       alt={alt}
       className={className}
       onError={() => setFailed(true)}
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      fetchPriority={priority ? "high" : "auto"}
     />
   );
 }

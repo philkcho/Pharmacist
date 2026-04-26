@@ -7,6 +7,13 @@ const SITE_URL =
 interface RenderInput {
   email: string;
   unsubscribeUrl?: string;
+  /**
+   * `signup`     — account created, NOT yet on the newsletter. CTA pushes
+   *                the user to opt into the weekly digest.
+   * `subscribed` — fallback for subscribe-form flow when curate is empty.
+   *                Confirms the subscription instead of asking for it.
+   */
+  mode?: "signup" | "subscribed";
 }
 
 /**
@@ -25,12 +32,16 @@ interface RenderInput {
 export function renderWelcomeEmail({
   email,
   unsubscribeUrl,
+  mode = "signup",
 }: RenderInput): { subject: string; html: string; text: string } {
-  const subject = `Welcome to ${BRAND.name} — your pharmacist-led health & beauty hub`;
+  const subject =
+    mode === "subscribed"
+      ? `You're in — your weekly ${BRAND.name} digest is set`
+      : `Welcome to ${BRAND.name} — your pharmacist-led health & beauty hub`;
   const subscribeUrl = `${SITE_URL}/en/subscribe`;
   const trendingUrl = `${SITE_URL}/en/trending`;
   const expertUrl = `${SITE_URL}/en/expert`;
-  const consultUrl = `${SITE_URL}/en/consult`;
+  const askUrl = `${SITE_URL}/en/ask`;
 
   const unsubLine = unsubscribeUrl
     ? `<a href="${escapeHtml(unsubscribeUrl)}" style="color:#64748b;text-decoration:underline;">Unsubscribe</a>`
@@ -57,7 +68,16 @@ export function renderWelcomeEmail({
         </tr>
         <tr>
           <td style="padding:24px;">
-            <p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#0f172a;">
+            ${
+              mode === "subscribed"
+                ? `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#0f172a;">
+              You're now subscribed to the <strong>${escapeHtml(BRAND.name)}</strong> weekly digest at <strong>${escapeHtml(email)}</strong>. Every Monday you'll get pharmacist-curated picks — trending product alerts, in-depth analysis, and any recall or safety updates you should know about — cross-checked against FDA labels, FAERS adverse-event data, and PubMed research.
+            </p>
+
+            <div style="margin:20px 0 8px 0;padding:16px 20px;background:#ecfdf5;border:1px solid #a7f3d0;border-radius:12px;color:#065f46;font-size:14px;line-height:1.5;">
+              ✅ <strong>You're all set.</strong> Your first weekly digest will arrive on the next Monday.
+            </div>`
+                : `<p style="margin:0 0 14px 0;font-size:15px;line-height:1.6;color:#0f172a;">
               Thanks for creating your account at <strong>${escapeHtml(BRAND.name)}</strong>. You now have a pharmacist in your corner for the health and beauty products you actually use — premium ingredient breakdowns, safety analysis, and product reviews cross-checked against FDA labels, FAERS adverse-event data, and PubMed research.
             </p>
 
@@ -70,11 +90,12 @@ export function renderWelcomeEmail({
                 <a href="${escapeHtml(subscribeUrl)}" style="display:inline-block;padding:12px 28px;background:#6366f1;color:#ffffff;text-decoration:none;border-radius:8px;font-size:15px;font-weight:700;">📬 Subscribe to the weekly digest</a>
               </div>
               <div style="margin-top:10px;text-align:center;font-size:12px;color:#94a3b8;">
-                Free · Unsubscribe anytime · We'll use ${escapeHtml(email)}
+                Free · weekly · unsubscribe anytime · We'll use ${escapeHtml(email)}
               </div>
-            </div>
+            </div>`
+            }
 
-            <h2 style="margin:28px 0 10px 0;font-size:16px;line-height:1.4;color:#0f172a;">In the meantime, explore</h2>
+            <h2 style="margin:28px 0 10px 0;font-size:16px;line-height:1.4;color:#0f172a;">${mode === "subscribed" ? "Start exploring" : "In the meantime, explore"}</h2>
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
               <tr>
                 <td style="padding:12px 0;border-bottom:1px solid #f1f5f9;">
@@ -90,8 +111,8 @@ export function renderWelcomeEmail({
               </tr>
               <tr>
                 <td style="padding:12px 0;">
-                  <a href="${escapeHtml(consultUrl)}" style="color:#0f172a;text-decoration:none;font-weight:600;font-size:15px;">💬 Ask a Pharmacist</a>
-                  <div style="font-size:13px;color:#64748b;margin-top:4px;">Have a question about a product, ingredient, or interaction? Send it in and get a personal answer.</div>
+                  <a href="${escapeHtml(askUrl)}" style="color:#0f172a;text-decoration:none;font-weight:600;font-size:15px;">💬 Community Q&A</a>
+                  <div style="font-size:13px;color:#64748b;margin-top:4px;">Real pharmacist-reviewed answers to questions about medications, supplements, and skincare.</div>
                 </td>
               </tr>
             </table>
@@ -114,22 +135,31 @@ export function renderWelcomeEmail({
 </body>
 </html>`;
 
+  const intro =
+    mode === "subscribed"
+      ? `You're now subscribed to the ${BRAND.name} weekly digest at ${email}.\n` +
+        `Every Monday you'll get pharmacist-curated picks — trending product alerts, in-depth\n` +
+        `analysis, and any recall or safety updates you should know about — cross-checked\n` +
+        `against FDA labels, FAERS adverse-event data, and PubMed research.\n\n` +
+        `✅ You're all set. Your first weekly digest arrives on the next Monday.\n\n`
+      : `Thanks for creating your account. You now have a pharmacist in your corner for the\n` +
+        `health and beauty products you actually use — premium ingredient breakdowns, safety\n` +
+        `analysis, and product reviews cross-checked against FDA labels, FAERS adverse-event\n` +
+        `data, and PubMed research.\n\n` +
+        `── Want updates straight to your inbox? ──\n` +
+        `Signing up for an account doesn't subscribe you to our newsletter. Subscribe separately\n` +
+        `to get our weekly pharmacist-curated digest — trending alerts, in-depth analysis, and\n` +
+        `any recall or safety updates you should know about, delivered every Monday.\n\n` +
+        `Subscribe → ${subscribeUrl}\n` +
+        `(Free · weekly · unsubscribe anytime · we'll use ${email})\n\n`;
+
   const text =
     `Welcome to ${BRAND.name} 👋\n\n` +
-    `Thanks for creating your account. You now have a pharmacist in your corner for the\n` +
-    `health and beauty products you actually use — premium ingredient breakdowns, safety\n` +
-    `analysis, and product reviews cross-checked against FDA labels, FAERS adverse-event\n` +
-    `data, and PubMed research.\n\n` +
-    `── Want updates straight to your inbox? ──\n` +
-    `Signing up for an account doesn't subscribe you to our newsletter. Subscribe separately\n` +
-    `to get our weekly pharmacist-curated digest — trending alerts, in-depth analysis, and\n` +
-    `any recall or safety updates you should know about, delivered every Monday.\n\n` +
-    `Subscribe → ${subscribeUrl}\n` +
-    `(Free · weekly · unsubscribe anytime · we'll use ${email})\n\n` +
-    `In the meantime, explore:\n` +
+    intro +
+    `${mode === "subscribed" ? "Start exploring" : "In the meantime, explore"}:\n` +
     `• Worth the Hype? — viral trends checked against the evidence — ${trendingUrl}\n` +
     `• Dr.'s Analysis — premium product breakdowns and safety flags — ${expertUrl}\n` +
-    `• Ask a Pharmacist — personal answers on products and interactions — ${consultUrl}\n\n` +
+    `• Community Q&A — pharmacist-reviewed answers to real questions — ${askUrl}\n\n` +
     `Reviewed by ${SITE_AUTHOR.displayName}. Educational content — not a substitute for individualized medical advice.` +
     (unsubscribeUrl ? `\n\nUnsubscribe: ${unsubscribeUrl}` : "");
 

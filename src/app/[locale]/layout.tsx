@@ -35,12 +35,21 @@ export const metadata: Metadata = {
     title: `${BRAND.name} — Evidence-Based Health & Beauty Analysis`,
     description: BRAND.shortDescription,
     url: BRAND.url,
+    images: [
+      {
+        url: `${BRAND.url}/opengraph-image`,
+        width: 1200,
+        height: 630,
+        alt: `${BRAND.name} — Pharmacist-Reviewed Health & Beauty Analysis`,
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: BRAND.name,
     description:
       "We read the science so you don't have to. Pharmacist-reviewed health & beauty analysis.",
+    images: [`${BRAND.url}/twitter-image`],
   },
   robots: {
     index: true,
@@ -56,6 +65,15 @@ export const metadata: Metadata = {
     capable: true,
     title: "PharmCare",
     statusBarStyle: "default",
+  },
+  // Search Console / Bing site ownership. Both fields are env-driven so
+  // tokens can rotate without a code change. Empty values are filtered
+  // out by Next.js when rendering meta tags.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION,
+    other: process.env.BING_SITE_VERIFICATION
+      ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION }
+      : undefined,
   },
 };
 

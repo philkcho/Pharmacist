@@ -19,6 +19,8 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}));
   const email = String(body.email ?? "").trim().toLowerCase();
+  const mode: "signup" | "subscribed" =
+    body.mode === "subscribed" ? "subscribed" : "signup";
   if (!email || !email.includes("@") || email.length > 320) {
     return NextResponse.json({ error: "Invalid email" }, { status: 400 });
   }
@@ -26,6 +28,7 @@ export async function POST(req: NextRequest) {
   const { subject, html, text } = renderWelcomeEmail({
     email,
     unsubscribeUrl: `${SITE_URL}/api/unsubscribe/SAMPLE_TOKEN`,
+    mode,
   });
 
   const result = await sendEmail({
@@ -35,7 +38,8 @@ export async function POST(req: NextRequest) {
     text,
     tags: [
       { name: "kind", value: "welcome" },
-      { name: "mode", value: "admin_test" },
+      { name: "mode", value: mode },
+      { name: "test", value: "1" },
     ],
   });
 

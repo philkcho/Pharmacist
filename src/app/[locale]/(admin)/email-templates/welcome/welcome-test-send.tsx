@@ -4,7 +4,11 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2, Send, Check, AlertTriangle } from "lucide-react";
 
-export function WelcomeTestSend() {
+interface Props {
+  mode?: "signup" | "subscribed";
+}
+
+export function WelcomeTestSend({ mode = "signup" }: Props) {
   const [email, setEmail] = useState("");
   const [pending, startTransition] = useTransition();
   const [status, setStatus] = useState<
@@ -27,7 +31,7 @@ export function WelcomeTestSend() {
         const res = await fetch("/api/admin/email-templates/welcome/test-send", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: trimmed }),
+          body: JSON.stringify({ email: trimmed, mode }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {

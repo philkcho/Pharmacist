@@ -6,12 +6,36 @@ import { WelcomeTestSend } from "./welcome-test-send";
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? "https://www.aipharmcare.com";
 
-export default function WelcomeTemplatePage() {
-  // Sample render — uses a placeholder address + dummy unsub token so the
-  // preview matches what a real recipient sees.
+interface PageProps {
+  searchParams: Promise<{ mode?: string }>;
+}
+
+const VARIANTS = [
+  {
+    mode: "signup" as const,
+    label: "Signup",
+    description:
+      "Sent to a new account holder. Pitches the weekly newsletter with a Subscribe CTA.",
+  },
+  {
+    mode: "subscribed" as const,
+    label: "Subscribed (fallback)",
+    description:
+      "Sent when someone subscribes via the form but the curate pool has no items. Confirms the subscription instead of pitching it.",
+  },
+];
+
+export default async function WelcomeTemplatePage({ searchParams }: PageProps) {
+  const params = await searchParams;
+  const activeMode: "signup" | "subscribed" =
+    params.mode === "subscribed" ? "subscribed" : "signup";
+  const activeVariant =
+    VARIANTS.find((v) => v.mode === activeMode) ?? VARIANTS[0];
+
   const sample = renderWelcomeEmail({
     email: "preview@example.com",
     unsubscribeUrl: `${SITE_URL}/api/unsubscribe/SAMPLE_TOKEN`,
+    mode: activeMode,
   });
 
   return (
@@ -31,6 +55,30 @@ export default function WelcomeTemplatePage() {
           via <code className="rounded bg-muted px-1 py-0.5 text-xs">email_subscribers.welcome_sent_at</code>.
         </p>
       </div>
+
+      <div className="mb-6 flex flex-wrap items-center gap-2 rounded-lg border bg-muted/30 p-1">
+        {VARIANTS.map((v) => {
+          const active = v.mode === activeMode;
+          return (
+            <Link
+              key={v.mode}
+              href={`/email-templates/welcome?mode=${v.mode}`}
+              className={
+                "flex-1 min-w-[180px] rounded-md px-3 py-2 text-center text-sm font-medium transition-colors " +
+                (active
+                  ? "bg-background shadow-sm text-foreground"
+                  : "text-muted-foreground hover:text-foreground")
+              }
+            >
+              {v.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      <p className="mb-4 text-xs text-muted-foreground">
+        {activeVariant.description}
+      </p>
 
       <div className="mb-6 grid gap-3 sm:grid-cols-2">
         <MetaCard label="Subject line" value={sample.subject} />
@@ -73,11 +121,12 @@ export default function WelcomeTemplatePage() {
       <section className="rounded-lg border bg-card p-4">
         <h2 className="text-sm font-semibold">Test send</h2>
         <p className="mt-1 text-xs text-muted-foreground">
-          Sends a one-off copy of this template to any address. Does not touch
-          the welcome_sent_at gate, so the recipient still gets the real
-          welcome on their next signup/subscribe if they&apos;re new.
+          Sends a one-off copy of the <strong>{activeVariant.label}</strong>{" "}
+          variant to any address. Does not touch the welcome_sent_at gate, so
+          the recipient still gets the real welcome on their next
+          signup/subscribe if they&apos;re new.
         </p>
-        <WelcomeTestSend />
+        <WelcomeTestSend mode={activeMode} />
       </section>
     </div>
   );

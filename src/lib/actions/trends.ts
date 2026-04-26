@@ -28,6 +28,7 @@ import {
 } from "@/lib/retrieval/fetch-open-beauty-facts";
 import { fetchFaersTopReactions } from "@/lib/fda/faers-client";
 import { fetchActiveRecalls } from "@/lib/fda/enforcement-client";
+import { submitToIndexNow } from "@/lib/seo/indexnow";
 import { matchProducts } from "@/lib/ai/match-products";
 import { generateTrendImageUrl } from "@/lib/ai/generate-trend-image";
 import type {
@@ -792,6 +793,10 @@ export async function analyzeTrend(
           `trend_topics publish update failed: ${updateError.message}`
         );
       }
+
+      // Notify Bing/Yandex/Seznam (IndexNow). Fire-and-forget so a slow
+      // ping never delays the publish flow.
+      void submitToIndexNow([`/trending/${slug}`]);
       return {
         trendId,
         outcome: "published",
@@ -963,7 +968,10 @@ export async function publishTrend(
 
   revalidatePath("/");
   revalidatePath("/trending");
-  if (current.slug) revalidatePath(`/trending/${current.slug}`);
+  if (current.slug) {
+    revalidatePath(`/trending/${current.slug}`);
+    void submitToIndexNow([`/trending/${current.slug}`]);
+  }
   revalidatePath("/trends");
   return { success: true };
 }

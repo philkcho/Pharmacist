@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { revalidatePath } from "next/cache";
 import { getBestOtcLabel, type FdaDrugLabel } from "@/lib/fda/client";
+import { submitToIndexNow } from "@/lib/seo/indexnow";
 
 /** Consider a synced FDA record stale after 90 days. */
 const STALE_MS = 90 * 24 * 60 * 60 * 1000;
@@ -335,18 +336,24 @@ export async function approveProduct(
   } = await supabase.auth.getUser();
   if (!user) return { ok: false, error: "Unauthorized" };
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("medications")
     .update({
       approval_status: "approved",
       approved_at: new Date().toISOString(),
       approved_by: user.id,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .select("slug")
+    .maybeSingle();
 
   if (error) return { ok: false, error: error.message };
   revalidatePath("/approval-queue");
   revalidatePath("/medications");
+  if (data?.slug) {
+    revalidatePath(`/analysis/${data.slug}`);
+    void submitToIndexNow([`/analysis/${data.slug}`]);
+  }
   return { ok: true };
 }
 

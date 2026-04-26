@@ -63,6 +63,7 @@ export async function POST(req: NextRequest) {
       source,
       userId: user?.id ?? null,
       frequency,
+      mode: "subscribed",
     });
     if (!welcome.ok) {
       console.error("[subscribe] welcome email failed:", welcome.reason);

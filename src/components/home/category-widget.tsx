@@ -199,7 +199,12 @@ export function CategoryWidget({
       ) : (
         <ol className="mt-3 space-y-2">
           {products.map((p, i) => (
-            <ProductRow key={p.id} product={p} rank={i + 1} />
+            <ProductRow
+              key={p.id}
+              product={p}
+              rank={i + 1}
+              priority={i === 0}
+            />
           ))}
         </ol>
       )}
@@ -242,9 +247,11 @@ function DomainToggleButton({
 function ProductRow({
   product,
   rank,
+  priority = false,
 }: {
   product: CategoryTopProduct;
   rank: number;
+  priority?: boolean;
 }) {
   const buyHref = product.purchaseUrl ?? `/analysis/${product.slug}`;
   const buyIsExternal = !!product.purchaseUrl;
@@ -264,6 +271,7 @@ function ProductRow({
           alt={product.name}
           className="h-full w-full object-contain"
           iconSize={20}
+          priority={priority}
         />
       </Link>
       <div className="min-w-0 flex-1">
