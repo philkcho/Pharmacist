@@ -28,6 +28,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(BRAND.url),
   applicationName: BRAND.name,
   authors: [{ name: SITE_AUTHOR.displayName }],
+  // Default og:image / twitter:image are served from /api/og (a stable,
+  // non-hashed URL). Child pages can override by setting their own
+  // `openGraph.images` / `twitter.images` — when they do, this default
+  // is shadowed by the page-level value (Next.js metadata merge rule).
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -37,7 +41,7 @@ export const metadata: Metadata = {
     url: BRAND.url,
     images: [
       {
-        url: `${BRAND.url}/opengraph-image`,
+        url: `${BRAND.url}/api/og`,
         width: 1200,
         height: 630,
         alt: `${BRAND.name} — Pharmacist-Reviewed Health & Beauty Analysis`,
@@ -49,7 +53,7 @@ export const metadata: Metadata = {
     title: BRAND.name,
     description:
       "We read the science so you don't have to. Pharmacist-reviewed health & beauty analysis.",
-    images: [`${BRAND.url}/twitter-image`],
+    images: [`${BRAND.url}/api/og`],
   },
   robots: {
     index: true,

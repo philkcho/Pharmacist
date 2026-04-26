@@ -1,14 +1,12 @@
 import { ImageResponse } from "next/og";
 import { BRAND } from "@/lib/brand";
 
-export const alt = `${BRAND.name} — Pharmacist-Reviewed Health & Beauty Analysis`;
-export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+const SIZE = { width: 1200, height: 630 } as const;
 
-// Default OG/Twitter card for the homepage and any descendant page that
-// doesn't override it. Renders at request time on the edge so brand copy
-// stays in sync with src/lib/brand.ts without shipping a static asset.
-export default function OgImage() {
+// Stable, hardcoded OG/Twitter card endpoint at /api/og. Layout and
+// page metadata point at this URL, so production never hits the hashed
+// path that the segment-scoped opengraph-image.tsx convention generates.
+export function GET() {
   return new ImageResponse(
     (
       <div
@@ -102,6 +100,6 @@ export default function OgImage() {
         </div>
       </div>
     ),
-    size
+    SIZE
   );
 }

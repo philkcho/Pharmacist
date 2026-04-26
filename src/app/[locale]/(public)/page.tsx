@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     locale: "en_US",
     images: [
       {
-        url: `${SITE_URL}/opengraph-image`,
+        url: `${SITE_URL}/api/og`,
         width: 1200,
         height: 630,
         alt: "AI PharmCare — Pharmacist-Reviewed Health & Beauty Analysis",
